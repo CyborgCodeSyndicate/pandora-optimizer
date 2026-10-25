@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>io.cyborgcode.pandora</groupId><artifactId>pandora-optimizer</artifactId><version>0.1.0-SNAPSHOT</version><packaging>pom</packaging>
+  <groupId>io.cyborgcode.pandora</groupId><artifactId>pandora-optimizer</artifactId><version>0.1.0</version><packaging>pom</packaging>
   <name>Pandora Optimizer</name><description>Local language-neutral context for AI Teacher and AI Navigator</description>
   <modules><module>annotations/java</module><module>engine</module><module>adapters/java</module><module>cli</module></modules>
   <properties><maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><jackson.version>2.22.4</jackson.version><junit.version>6.1.3</junit.version></properties>

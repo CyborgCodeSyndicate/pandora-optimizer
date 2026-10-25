@@ -1,0 +1,232 @@
+{
+  "io.cyborgcode.roa.api.pandora.AvailableOptionsApiInteractorRules.AvailableEndpoints": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.api.core.Endpoint",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.api.pandora.AvailableOptionsApiAdapterRules.AvailableApiHookFlows": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.api.hooks.ApiHookFlow",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.api.pandora.AvailableOptionsApiAdapterRules.AvailableStorageKeysApiOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.api.storage.StorageKeysApi",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.validator.pandora.AvailableOptionsAssertionsRules.AvailableAssertionTargets": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.validator.core.AssertionTarget",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.validator.pandora.AvailableOptionsAssertionsRules.AvailableAssertionTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.validator.core.AssertionType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.db.pandora.AvailableOptionsRules.AvailableDbQueries": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.db.query.DbQuery",
+    "render": "QUALIFIED"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailableDataForgeOptions": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.framework.parameters.DataForge",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailableDataRipperOptions": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.framework.parameters.DataRipper",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailablePreQuestJourneyOptions": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.framework.parameters.PreQuestJourney",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailableHookExecutionOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.framework.hooks.HookExecution",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailableStorageKeysTestOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.framework.storage.StorageKeysTest",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.framework.pandora.AvailableOptionsTestFrameworkRules.AvailableStoreKeysTestOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.framework.storage.StoreKeys",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableAccordionComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.accordion.AccordionComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableAlertComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.alert.AlertComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableButtonComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.button.ButtonComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableCheckboxComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.checkbox.CheckboxComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableInputComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.input.InputComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableLinkComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.link.LinkComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableListComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.list.ItemListComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableLoaderComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.loader.LoaderComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableModalComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.modal.ModalComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableRadioComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.radio.RadioComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableSelectComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.select.SelectComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableTabComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.tab.TabComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableTableComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.table.base.TableComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableToggleComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.toggle.ToggleComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableComponentTypes": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.components.base.ComponentType",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableStrategyOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.ui.util.strategy.Strategy",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableFilterStrategyOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.ui.components.table.filters.FilterStrategy",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsRules.AvailableSortingStrategyOptions": {
+    "kind": "enumType",
+    "target": "io.cyborgcode.roa.ui.components.table.sort.SortingStrategy",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableAccordionUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.AccordionUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableAlertUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.AlertUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableButtonUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.ButtonUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableCheckboxUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.CheckboxUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableInputUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.InputUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableLinkUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.LinkUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableListUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.ListUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableLoaderUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.LoaderUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableModalUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.ModalUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableRadioUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.RadioUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableSelectUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.SelectUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableTabUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.TabUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableTableUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.service.tables.TableElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableToggleUiElements": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.selenium.ToggleUiElement",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableDataInterceptOptions": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.parameters.DataIntercept",
+    "render": "NAME"
+  },
+  "io.cyborgcode.roa.ui.pandora.AvailableOptionsUiRules.AvailableTableElementOptions": {
+    "kind": "implementationsOf",
+    "target": "io.cyborgcode.roa.ui.service.tables.TableElement",
+    "render": "NAME"
+  }
+}

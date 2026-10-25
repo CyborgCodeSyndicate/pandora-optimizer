@@ -156,4 +156,31 @@ class JavaAdapterTest {
                 result.diagnostics().stream()
                         .anyMatch(d -> d.code().equals("RUNTIME_RULE_UNSUPPORTED")));
     }
+
+    @Test
+    void extractsDeclarativeInterfaceRulesAndMetadata() throws Exception {
+        var result =
+                scan(
+                        header
+                                + """
+            @AiCompassOptions(implementationsOf=Endpoint.class,
+                meta={@AiCompassOptions.Meta(key="type",value="endpoint")})
+            interface Endpoint<T> {}
+            enum AppEndpoints implements Endpoint<AppEndpoints> { LOGIN, USERS }
+            class Example {}
+            """);
+        var contract =
+                result.symbols().stream()
+                        .filter(s -> s.name().equals("Endpoint"))
+                        .findFirst()
+                        .orElseThrow();
+        assertEquals("demo.Endpoint", contract.compass().options().getFirst().implementationsOf());
+        assertEquals("endpoint", contract.compass().extra().get("type"));
+        var implementation =
+                result.symbols().stream()
+                        .filter(s -> s.name().equals("AppEndpoints"))
+                        .findFirst()
+                        .orElseThrow();
+        assertEquals(List.of("demo.Endpoint"), implementation.supertypes());
+    }
 }

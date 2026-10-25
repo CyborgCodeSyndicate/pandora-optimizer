@@ -3,7 +3,7 @@ name: ai-teacher
 description: Use a Pandora lesson catalog to apply author-curated patterns when implementing or changing code in a repository configured with pandora/config.json.
 ---
 
-Use the local Pandora CLI to find lessons relevant to the requested code change. Run commands from the target repository, or pass `--root <workspace>`. The CLI must already be installed or built; the repository README describes setup.
+Use the local Pandora CLI to find lessons relevant to the requested code change. Resolve `scripts/pandora.py` relative to this SKILL.md and use its absolute path: `python <skill-directory>/scripts/pandora.py <arguments>`. This helper finds the registered runtime without requiring a shell command on PATH. In commands below, replace `pandora` with this Python invocation. Run from the target repository, or pass `--root <workspace>`.
 
 Run `pandora scan --if-stale --json` before retrieval. It scans configured Java/C# modules and refreshes configured resources. Use `--offline` when network access is unavailable and cached remote resources are acceptable. If scanning fails, report that limitation; a previous catalog may be stale.
 

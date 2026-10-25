@@ -47,7 +47,7 @@ Here `pandora` means `pandora.cmd` on Windows or `pandora.sh` on Unix, optionall
 
 Add the small annotation SDK to the target project:
 
-- Java: `io.cyborgcode.pandora:pandora-annotations:0.1.0-SNAPSHOT`. Run `mvnw install` in this repository to install it locally; publishing to a Maven registry is a later release action.
+- Java: `io.cyborgcode.pandora:pandora-annotations:0.1.0`. Run `mvnw install` in this repository to install it locally; publishing to a Maven registry is a later release action.
 - C#: use a project reference to `annotations/dotnet/Pandora.Annotations.csproj`, or create a package with `dotnet pack annotations/dotnet/Pandora.Annotations.csproj` and use a local NuGet feed.
 
 Java dependencies required for symbol resolution go in a module's `references` as JAR paths. C# references are assembly paths. Scanning does not restore packages, run Maven/MSBuild, execute source generators, or load the target application. Provide generated source explicitly if it is part of the intended scan.
@@ -165,7 +165,7 @@ Generation switches are atomic. Scan errors preserve the last good generation. O
 }
 ```
 
-Pin remote bundles with SHA-256 and use immutable versioned URLs. This version does not resolve package registries automatically or re-run producer option rules against a consumer's types. Catalog origin is preserved, and imported source paths are never treated as local paths.
+Pin remote bundles with SHA-256 and use immutable versioned URLs. This version does not resolve package registries automatically or execute arbitrary producer code. Declarative implementationsOf rules are re-resolved against consumer enum facts. Catalog origin is preserved, and imported source paths are never treated as local paths.
 
 Exit codes: 0 success; 2 invalid configuration, unavailable adapter/resource or command error; 3 scan/strict validation failure. `validate` also returns 3 for stale local inputs. Warnings are allowed unless `--strict` is supplied.
 
@@ -186,7 +186,7 @@ See [architecture and protocol](docs/architecture.md). A new language implements
 
 ## Skills and distribution
 
-Copy `skills/ai-teacher` and `skills/ai-navigator` into the skill installation location supported by your agent. Keep the CLI on PATH or adapt the launch path in your installation. The files contain no provider API calls or embedded credentials.
+Install both provider-neutral packages with `python scripts/install_skills.py --target <repository> --providers codex,claude`. Other hosts can copy the same skill folders and set PANDORA_HOME to the runtime directory. The packages contain no provider API calls or embedded credentials.
 
 After verification, `python scripts/package.py` creates `dist/pandora-optimizer-0.1.0.zip`, including the CLI, C# worker, schemas, documentation and skills. This first distribution requires an installed Java 21+ runtime and .NET 8 runtime. It does not bundle a JVM or a self-contained .NET runtime.
 
@@ -194,11 +194,15 @@ After verification, `python scripts/package.py` creates `dist/pandora-optimizer-
 
 Implemented: Java/C# source extraction, curated lessons, rich method/parameter guidance, constructors, Java fields and C# properties, literal/enum/resource options, examples, file/HTTPS providers, offline cache, digest pinning, schemas, catalog export/import, freshness, query CLI and skills.
 
-Deliberate follow-up work: compiled-only JAR/DLL extraction; Maven/Gradle/MSBuild dependency discovery; arbitrary executable rules and consumer-scoped implementation queries; complete cross-language type-default merging; structured comment annotations; Python/TypeScript adapters; reference traversal; package-coordinate resolution; runtime-bundled installers.
+Deliberate follow-up work: compiled-only JAR/DLL extraction; Maven/Gradle/MSBuild dependency discovery; arbitrary executable rules; complete cross-language type-default merging; structured comment annotations; Python/TypeScript adapters; reference traversal; package-coordinate resolution; runtime-bundled installers.
 
 Java recognizes legacy `@Pandora` / `@PandoraOptions` / `@AiLesson` names from the old packages. It does not guarantee complete binary or JSON compatibility. Executable legacy rules produce an explicit migration error. Map old `exampleFilesPath` values to configured resource IDs or migrate them to `AiCompass.examples`.
 
 The initial C# syntax level is C# 12. Source-only semantic analysis can be partial when references or generated code are absent. Read diagnostics; use strict scanning in producer CI.
+
+## ROA integration
+
+See [the migrated framework, example setup and real agent tests](docs/roa-integration.md).
 
 ## Development
 

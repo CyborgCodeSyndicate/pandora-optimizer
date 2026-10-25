@@ -154,6 +154,18 @@
             "string",
             "null"
           ]
+        },
+        "implementationsOf": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "render": {
+          "enum": [
+            "NAME",
+            "QUALIFIED"
+          ]
         }
       },
       "required": [
@@ -206,6 +218,10 @@
           "items": {
             "$ref": "#/$defs/option"
           }
+        },
+        "extra": {
+          "type": "object",
+          "additionalProperties": true
         }
       },
       "required": [
@@ -225,7 +241,8 @@
           "enum": [
             "complete",
             "truncated",
-            "failed"
+            "failed",
+            "deferred"
           ]
         },
         "total": {
@@ -416,6 +433,19 @@
           "items": {
             "type": "object"
           }
+        },
+        "supertypes": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [

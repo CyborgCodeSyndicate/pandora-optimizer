@@ -141,7 +141,8 @@ public final class JavaAdapter implements LanguageAdapter {
                             lesson(t),
                             guidance,
                             values,
-                            "resolved"));
+                            "resolved",
+                            supertypes(t)));
             for (BodyDeclaration<?> member : t.getMembers()) {
                 if (member instanceof CallableDeclaration<?> callable) {
                     boolean annotated =
@@ -220,6 +221,31 @@ public final class JavaAdapter implements LanguageAdapter {
                                         List.of(),
                                         resolution(type)));
                     }
+        }
+
+        List<String> supertypes(TypeDeclaration<?> type) {
+            List<com.github.javaparser.ast.type.ClassOrInterfaceType> bases = new ArrayList<>();
+            if (type instanceof ClassOrInterfaceDeclaration c) {
+                bases.addAll(c.getExtendedTypes());
+                bases.addAll(c.getImplementedTypes());
+            } else if (type instanceof EnumDeclaration e) bases.addAll(e.getImplementedTypes());
+            else if (type instanceof RecordDeclaration r) bases.addAll(r.getImplementedTypes());
+            return bases.stream().map(this::declaredTypeName).distinct().toList();
+        }
+
+        String declaredTypeName(Type type) {
+            try {
+                return type.resolve().describe().replaceAll("<.*>", "");
+            } catch (RuntimeException e) {
+                String name = type.toString().replaceAll("<.*>", "");
+                if (name.contains(".")) return name;
+                for (var i : unit.getImports())
+                    if (!i.isStatic()
+                            && !i.isAsterisk()
+                            && i.getName().getIdentifier().equals(name)) return i.getNameAsString();
+                return unit.getPackageDeclaration().map(p -> p.getNameAsString() + ".").orElse("")
+                        + name;
+            }
         }
 
         void scanCallable(String owner, CallableDeclaration<?> c) {
@@ -412,11 +438,26 @@ public final class JavaAdapter implements LanguageAdapter {
                                 "DUPLICATE_GUIDANCE", "Conflicting Compass annotations", path));
             Map<String, Expression> f = primary.isEmpty() ? Map.of() : fields(primary.getFirst());
             List<OptionSpec> options = new ArrayList<>();
+            Map<String, Object> extra = new LinkedHashMap<>();
             List<String> examples = new ArrayList<>(strings(f.get("examples")));
             for (var a : optionAnnotations) {
                 var o = fields(a);
-                String enumType = null;
-                if (o.get("enumType") instanceof ClassExpr c) enumType = typeName(c.getType());
+                String enumType = null, implementationsOf = null;
+                if (o.get("enumType") instanceof ClassExpr c)
+                    enumType = declaredTypeName(c.getType());
+                if (o.get("implementationsOf") instanceof ClassExpr c)
+                    implementationsOf = declaredTypeName(c.getType());
+                Expression metadata = o.get("meta");
+                List<Expression> entries =
+                        metadata instanceof ArrayInitializerExpr array
+                                ? array.getValues()
+                                : metadata == null ? List.of() : List.of(metadata);
+                for (Expression entry : entries)
+                    if (entry instanceof AnnotationExpr meta) {
+                        var pair = fields(meta);
+                        String key = text(pair.get("key"), "");
+                        if (!key.isBlank()) extra.put(key, text(pair.get("value"), ""));
+                    }
                 if (o.containsKey("availableOptionsRule"))
                     diagnostics.add(
                             Diagnostic.error(
@@ -430,7 +471,9 @@ public final class JavaAdapter implements LanguageAdapter {
                                 strings(o.get("values")),
                                 text(o.get("source"), ""),
                                 text(o.get("pointer"), ""),
-                                enumType));
+                                enumType,
+                                implementationsOf,
+                                text(o.get("render"), "NAME")));
             }
             return new Compass(
                     text(f.get("description"), ""),
@@ -438,7 +481,8 @@ public final class JavaAdapter implements LanguageAdapter {
                     enumName(f.get("creation"), "AUTO"),
                     enumName(f.get("preference"), "AUTO"),
                     examples,
-                    options);
+                    options,
+                    extra);
         }
     }
 }

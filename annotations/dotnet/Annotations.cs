@@ -29,4 +29,6 @@ public sealed class AiCompassOptionsAttribute : Attribute
     public string Source { get; set; } = "";
     public string Pointer { get; set; } = "";
     public Type? EnumType { get; set; }
+    public Type? ImplementationsOf { get; set; }
+    public string Render { get; set; } = "NAME";
 }

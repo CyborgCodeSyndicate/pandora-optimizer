@@ -23,6 +23,23 @@ public @interface AiCompassOptions {
 
     Class<?> enumType() default Void.class;
 
+    /** Discover enum implementations in the consumer and configured dependency catalogs. */
+    Class<?> implementationsOf() default Void.class;
+
+    /** NAME preserves Enum.name(); QUALIFIED emits the declaring type and constant. */
+    String render() default "NAME";
+
+    Meta[] meta() default {};
+
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({})
+    @interface Meta {
+        String key();
+
+        String value();
+    }
+
     @Documented
     @Retention(RetentionPolicy.RUNTIME)
     @Target({

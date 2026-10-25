@@ -52,7 +52,7 @@ The engine resolves literal values, same-module enum values, and JSON Pointer se
 
 Usage examples are curated entries loaded from resources, not automatically mined call sites. The entries may match symbol IDs, qualified names or signatures. Bundle JSON contains the resolved examples, so another repository can consume them without the author's filesystem.
 
-Imported catalogs are immutable snapshots. Their origin is changed to catalog:<resource-id>; the engine does not resolve their source paths locally or re-run their option rules. Use versioned URIs and digests for dependency identity in v0.1. Package-manager resolution and consumer-scoped dynamic option enrichment remain future work.
+Imported catalogs preserve producer API declarations and examples. Their origin is changed to catalog:<resource-id>; the engine does not resolve their source paths locally or execute producer code. Declarative enum and implementationsOf queries are resolved again against all configured catalog/consumer facts. Use versioned URIs and digests for dependency identity in v0.1. Package-manager resolution and arbitrary executable providers remain future work.
 
 ## Schemas and validation
 

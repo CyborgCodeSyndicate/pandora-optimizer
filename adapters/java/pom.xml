@@ -1,4 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><parent><groupId>io.cyborgcode.pandora</groupId><artifactId>pandora-optimizer</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent><artifactId>pandora-adapter-java</artifactId><dependencies>
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><parent><groupId>io.cyborgcode.pandora</groupId><artifactId>pandora-optimizer</artifactId><version>0.1.0</version><relativePath>../../pom.xml</relativePath></parent><artifactId>pandora-adapter-java</artifactId><dependencies>
 <dependency><groupId>io.cyborgcode.pandora</groupId><artifactId>pandora-engine</artifactId><version>${project.version}</version></dependency>
 <dependency><groupId>com.github.javaparser</groupId><artifactId>javaparser-symbol-solver-core</artifactId><version>3.28.2</version></dependency>
 </dependencies></project>

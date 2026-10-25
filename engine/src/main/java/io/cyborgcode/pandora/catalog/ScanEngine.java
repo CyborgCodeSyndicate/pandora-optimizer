@@ -74,7 +74,6 @@ public final class ScanEngine {
                     symbols.add(node);
                 }
             }
-            new Enricher(resources, config.maxOptions(), diagnostics).enrich(symbols);
             for (String resource : config.catalogs()) {
                 JsonNode catalog = resources.load(resource);
                 List<Diagnostic> errors = CatalogValidator.validate(catalog);
@@ -89,6 +88,8 @@ public final class ScanEngine {
                     symbols.add(imported);
                 }
             }
+            // Imported contracts are resolved against consumer facts as well as producer facts.
+            new Enricher(resources, config.maxOptions(), diagnostics).enrich(symbols);
             List<JsonNode> sorted = new ArrayList<>();
             symbols.forEach(sorted::add);
             sorted.sort(Comparator.comparing(s -> s.path("id").asText()));

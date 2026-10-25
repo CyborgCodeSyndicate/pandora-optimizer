@@ -75,10 +75,11 @@ public sealed class CSharpAdapter
         bool ownerGuided = s.ContainingType?.GetAttributes().Any(IsGuidance) ?? false;
         if (s is not INamedTypeSymbol && !guided && !parameterGuided && !(ownerGuided && s.DeclaredAccessibility is Accessibility.Public or Accessibility.Protected)) return;
         string kind, name = s.Name, qualified, native; string? returnType = null, parent = null;
-        Parameter[] parameters = []; string[] enumValues = []; string resolution = "resolved";
+        Parameter[] parameters = []; string[] enumValues = []; string resolution = "resolved"; string[] supertypes = [];
         if (s is INamedTypeSymbol type)
         {
             qualified = TypeName(type); native = qualified;
+            supertypes = type.Interfaces.Select(TypeName).Concat(type.BaseType is null ? [] : new[] { TypeName(type.BaseType) }).ToArray();
             kind = type.TypeKind switch { TypeKind.Enum => "ENUM", TypeKind.Interface => "INTERFACE", TypeKind.Struct => type.IsRecord ? "RECORD" : "STRUCT", _ => type.IsRecord ? "RECORD" : "CLASS" };
             if (type.ContainingType is { } enclosing) parent = Id(TypeName(enclosing));
             if (type.TypeKind == TypeKind.Enum) enumValues = type.GetMembers().OfType<IFieldSymbol>().Where(f => f.HasConstantValue).Select(f => f.Name).ToArray();
@@ -106,7 +107,7 @@ public sealed class CSharpAdapter
         var span = node.GetLocation().GetLineSpan();
         var location = new SourceLocation(path, span.StartLinePosition.Line + 1, span.EndLinePosition.Line + 1, hash);
         string signature = s is IMethodSymbol ? native[(native.IndexOf('#') + 1)..] : qualified;
-        var result = new Symbol(Id(native), "csharp", request.ModuleId, kind, name, qualified, signature, parent, returnType, parameters, location, ReadLesson(attrs, path), ReadCompass(attrs, path), enumValues, resolution);
+        var result = new Symbol(Id(native), "csharp", request.ModuleId, kind, name, qualified, signature, parent, returnType, parameters, location, ReadLesson(attrs, path), ReadCompass(attrs, path), enumValues, resolution, supertypes);
         if (output.TryGetValue(result.Id, out var previous))
         {
             // Partial declarations share identity; combine only non-conflicting guidance.
@@ -151,7 +152,7 @@ public sealed class CSharpAdapter
     {
         var a = Find(attrs, "AiCompass");
         var options = attrs.Where(x => x.AttributeClass?.ToDisplayString() == AnnotationNamespace + "AiCompassOptionsAttribute").Select(x =>
-            new OptionSpec(Strings(x, "Values", path), Text(x, "Source", "", path), Text(x, "Pointer", "", path), (Get(x, "EnumType")?.Value as ITypeSymbol) is { } type ? TypeName(type) : null)).ToArray();
+            new OptionSpec(Strings(x, "Values", path), Text(x, "Source", "", path), Text(x, "Pointer", "", path), (Get(x, "EnumType")?.Value as ITypeSymbol) is { } type ? TypeName(type) : null, (Get(x, "ImplementationsOf")?.Value as ITypeSymbol) is { } contract ? TypeName(contract) : null, Text(x, "Render", "NAME", path))).ToArray();
         return a is null && options.Length == 0 ? null : new(a is null ? "" : Text(a, "Description", "", path), a is null ? [] : Strings(a, "Tags", path), a is null ? "AUTO" : EnumName(a, "Creation", "AUTO", path), a is null ? "AUTO" : EnumName(a, "Preference", "AUTO", path), a is null ? [] : Strings(a, "Examples", path), options);
     }
     private static bool Contained(string root, string path)

@@ -124,7 +124,10 @@ public final class CatalogQuery {
         n.put("freshness", stale ? "stale" : "current-local-inputs");
         n.put("remoteFreshness", "as-of-last-scan");
         n.put("offline", catalog.path("offline").asBoolean());
-        n.set("diagnostics", catalog.path("diagnostics"));
+        n.put("diagnosticCount", catalog.path("diagnostics").size());
+        ArrayNode diagnostics = n.putArray("diagnostics");
+        for (int i = 0; i < Math.min(20, catalog.path("diagnostics").size()); i++)
+            diagnostics.add(catalog.path("diagnostics").get(i));
         return n;
     }
 
