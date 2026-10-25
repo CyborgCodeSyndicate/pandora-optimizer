@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": "demo.Payments.submit",
+      "summary": "Use a stable payment key.",
+      "usages": [{"language":"java","code":"client.submit(key, \"sandbox\", Mode.STANDARD);","description":"Reuse key when retrying.","level":"GOOD","contextHint":"Payment retry"}]
+    },
+    {
+      "id": "Demo.Payments.Submit",
+      "summary": "Use a stable payment key.",
+      "usages": [{"language":"csharp","code":"client.Submit(key, \"sandbox\", Mode.STANDARD);","description":"Reuse key when retrying.","level":"GOOD","contextHint":"Payment retry"}]
+    }
+  ]
+}

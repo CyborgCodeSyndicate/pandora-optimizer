@@ -1,0 +1,40 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: mvn -B -ntp verify
+      - run: dotnet restore PandoraOptimizer.sln --locked-mode
+      - run: dotnet test PandoraOptimizer.sln --no-restore --collect:"XPlat Code Coverage"
+      - run: python -m pip install -r tests/integration/requirements.txt
+      - run: python -m unittest discover -s tests/integration -v
+      - run: python scripts/check_skills.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports-${{ matrix.os }}
+          path: |
+            **/target/surefire-reports/
+            **/target/site/jacoco/
+            **/TestResults/

@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pandora-optimizer:schema:adapter-response:1",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "symbols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/symbol"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "symbols",
+    "diagnostics"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "error",
+            "info"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "startLine",
+        "endLine",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "lesson": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "level": {
+          "enum": [
+            "EXCELLENT",
+            "GOOD",
+            "BAD"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "whenToUse": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "category",
+        "level",
+        "description",
+        "whenToUse",
+        "tags",
+        "related"
+      ],
+      "additionalProperties": false
+    },
+    "option": {
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pointer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enumType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "values",
+        "source",
+        "pointer",
+        "enumType"
+      ],
+      "additionalProperties": false
+    },
+    "compass": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "creation": {
+          "enum": [
+            "AUTO",
+            "CONSTRUCTOR",
+            "BUILDER",
+            "STATIC_FACTORY",
+            "ENUM_CONSTANT",
+            "SINGLETON",
+            "PROVIDED"
+          ]
+        },
+        "preference": {
+          "enum": [
+            "AUTO",
+            "PREFER",
+            "AVOID",
+            "FORBID"
+          ]
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        }
+      },
+      "required": [
+        "description",
+        "tags",
+        "creation",
+        "preference",
+        "examples",
+        "options"
+      ],
+      "additionalProperties": false
+    },
+    "resolvedOptions": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "truncated",
+            "failed"
+          ]
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "total",
+        "truncated",
+        "values"
+      ],
+      "additionalProperties": false
+    },
+    "parameter": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "variadic": {
+          "type": "boolean"
+        },
+        "compass": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/compass"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolvedOptions": {
+          "$ref": "#/$defs/resolvedOptions"
+        },
+        "guidanceOrigin": {
+          "type": "string"
+        },
+        "usageExamples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "index",
+        "name",
+        "type",
+        "optional",
+        "variadic",
+        "compass"
+      ],
+      "additionalProperties": false
+    },
+    "symbol": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "CLASS",
+            "INTERFACE",
+            "RECORD",
+            "STRUCT",
+            "ENUM",
+            "ANNOTATION",
+            "METHOD",
+            "CONSTRUCTOR",
+            "FIELD",
+            "PROPERTY",
+            "FUNCTION",
+            "MODULE"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "qualifiedName": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "returnType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/parameter"
+          }
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lesson": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/lesson"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compass": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/compass"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enumValues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolution": {
+          "enum": [
+            "resolved",
+            "partial",
+            "unresolved"
+          ]
+        },
+        "origin": {
+          "type": "string"
+        },
+        "resolvedOptions": {
+          "$ref": "#/$defs/resolvedOptions"
+        },
+        "guidanceOrigin": {
+          "type": "string"
+        },
+        "usageExamples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "language",
+        "module",
+        "kind",
+        "name",
+        "qualifiedName",
+        "signature",
+        "parentId",
+        "returnType",
+        "parameters",
+        "source",
+        "lesson",
+        "compass",
+        "enumValues",
+        "resolution"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

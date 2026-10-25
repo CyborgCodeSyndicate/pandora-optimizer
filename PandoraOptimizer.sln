@@ -1,0 +1,45 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "annotations", "annotations", "{12B377E7-7FCE-4AE9-AC1E-D2A6361C04D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pandora.Annotations", "annotations\dotnet\Pandora.Annotations.csproj", "{CF203523-EAE3-4AAC-B73B-DBBF853839A3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "adapters", "adapters", "{CA99E569-E3ED-433B-9DAE-99E0FF6B6CFB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pandora.Adapter.DotNet", "adapters\dotnet\Pandora.Adapter.DotNet.csproj", "{5F987070-5404-40F8-9520-8D798C5AA978}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1EF007B4-F1F9-456A-8420-4EE67E388EE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pandora.Adapter.DotNet.Tests", "tests\dotnet\Pandora.Adapter.DotNet.Tests.csproj", "{33C72541-D038-4E18-A0A3-886D4E1358EB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CF203523-EAE3-4AAC-B73B-DBBF853839A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF203523-EAE3-4AAC-B73B-DBBF853839A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF203523-EAE3-4AAC-B73B-DBBF853839A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF203523-EAE3-4AAC-B73B-DBBF853839A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F987070-5404-40F8-9520-8D798C5AA978}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F987070-5404-40F8-9520-8D798C5AA978}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F987070-5404-40F8-9520-8D798C5AA978}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F987070-5404-40F8-9520-8D798C5AA978}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33C72541-D038-4E18-A0A3-886D4E1358EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33C72541-D038-4E18-A0A3-886D4E1358EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33C72541-D038-4E18-A0A3-886D4E1358EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33C72541-D038-4E18-A0A3-886D4E1358EB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CF203523-EAE3-4AAC-B73B-DBBF853839A3} = {12B377E7-7FCE-4AE9-AC1E-D2A6361C04D6}
+		{5F987070-5404-40F8-9520-8D798C5AA978} = {CA99E569-E3ED-433B-9DAE-99E0FF6B6CFB}
+		{33C72541-D038-4E18-A0A3-886D4E1358EB} = {1EF007B4-F1F9-456A-8420-4EE67E388EE2}
+	EndGlobalSection
+EndGlobal

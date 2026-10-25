@@ -1,0 +1,13 @@
+**/target/
+**/bin/
+**/obj/
+**/TestResults/
+pandora/generated/
+pandora/cache/
+**/.vs/
+.idea/
+*.user
+.env
+build-*.log
+**/__pycache__/
+dist/

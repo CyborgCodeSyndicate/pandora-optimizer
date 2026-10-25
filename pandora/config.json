@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "workspaceId": "pandora-optimizer-demo",
+  "modules": [
+    {
+      "id": "java-demo",
+      "language": "java",
+      "sourceRoots": [
+        "fixtures/java"
+      ],
+      "references": [],
+      "command": []
+    },
+    {
+      "id": "dotnet-demo",
+      "language": "csharp",
+      "sourceRoots": [
+        "fixtures/dotnet"
+      ],
+      "references": [],
+      "command": [
+        "dotnet",
+        "adapters/dotnet/bin/Debug/net8.0/Pandora.Adapter.DotNet.dll"
+      ]
+    }
+  ],
+  "resources": {
+    "payment-options": {
+      "uri": "fixtures/resources/options.json"
+    },
+    "payment-examples": {
+      "uri": "fixtures/resources/examples.json"
+    }
+  },
+  "catalogs": [],
+  "maxOptions": 50
+}

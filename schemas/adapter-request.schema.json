@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "workspaceId": {
+      "type": "string"
+    },
+    "moduleId": {
+      "type": "string"
+    },
+    "root": {
+      "type": "string"
+    },
+    "sourceRoots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "workspaceId",
+    "moduleId",
+    "root",
+    "sourceRoots",
+    "references"
+  ],
+  "additionalProperties": false
+}
