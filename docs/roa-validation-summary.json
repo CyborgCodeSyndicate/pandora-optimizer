@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-25",
+  "optimizer": {
+    "javaUnitTests": 32,
+    "dotnetUnitTests": 10,
+    "integrationTests": 8
+  },
+  "roaLibraries": {
+    "mavenModuleSummaries": [
+      [
+        157,
+        0,
+        0,
+        0
+      ],
+      [
+        128,
+        0,
+        0,
+        0
+      ],
+      [
+        137,
+        0,
+        0,
+        0
+      ],
+      [
+        1023,
+        0,
+        0,
+        0
+      ],
+      [
+        314,
+        0,
+        0,
+        0
+      ],
+      [
+        96,
+        0,
+        0,
+        0
+      ],
+      [
+        39,
+        0,
+        0,
+        0
+      ],
+      [
+        518,
+        0,
+        0,
+        1
+      ]
+    ],
+    "tests": 2412,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "examples": "All three modules completed test-compile",
+  "agents": {
+    "claude": "passed",
+    "codex-current-cli": "passed"
+  },
+  "note": "Maven aggregate totals include dynamic/parameterized tests that XML suite-header totals omit."
+}

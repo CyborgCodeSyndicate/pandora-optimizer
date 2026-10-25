@@ -46,7 +46,7 @@ public interface Endpoint<T extends Enum<T>> {
 }
 ```
 
-implementsOf discovery is spelled `implementationsOf`. It searches enum facts from the consuming workspace and configured catalogs, including transitive interface relationships. The default render is NAME; QUALIFIED retains the old fully qualified enum output where required. Fixed enum rules use enumType = SomeEnum.class.
+The `implementationsOf` query searches enum facts from the consuming workspace and configured catalogs, including transitive interface relationships. The default render is NAME; QUALIFIED retains the old fully qualified enum output where required. Fixed enum rules use enumType = SomeEnum.class.
 
 The 140 migrated source files preserve all primary annotation payloads and executable declarations. There are 1,139 Compass annotations (including marker annotations). Forty-nine references to 46 old rule classes become declarative enum/implementation queries. Seven obsolete rule helper files are removed. All 527 usage-file references are removed; no usage JSON files are created.
 
@@ -117,7 +117,7 @@ The scripts use existing authenticated accounts, limit the run duration, and pro
 ## Validation results
 
 - Optimizer: 32 Java unit tests, 10 C# unit tests, 8 cross-process integration tests passed.
-- ROA libraries: 997 discovered tests, 996 executed successfully, 1 skipped, 0 failures/errors; coverage and static checks passed through the reactor build and resumed reactor.
+- ROA libraries: 2,412 test cases in Maven aggregate summaries, 2,411 executed successfully, 1 skipped, 0 failures/errors; coverage and static checks passed through the reactor build and resumed reactor.
 - All three example modules: main and test source compiled successfully.
 - Annotation/executable AST audit: passed for all 140 migrated Java files.
 - Consumer catalog: 1,229 symbols, 3 lessons, real consumer enum options, zero usage-file references.
