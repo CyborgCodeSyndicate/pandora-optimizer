@@ -19,8 +19,8 @@ jobs:
         with:
           java_version: '21'
           server_ids: github-pandora-optimizer
-          github_packages_user: ${{ secrets.GH_PACKAGES_USER }}
-          github_packages_token: ${{ secrets.GH_PACKAGES_PAT }}
+          github_packages_user: ${{ secrets.GH_PACKAGES_USER || github.actor }}
+          github_packages_token: ${{ secrets.GH_PACKAGES_PAT || github.token }}
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'

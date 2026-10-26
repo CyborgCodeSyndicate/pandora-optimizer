@@ -16,7 +16,9 @@ The Maven reactor inherits `io.cyborgcode.utilities:parent-pom`. For these
 development builds, `shared-static-data` and `parent-pom` use the published
 utilities version `0.0.0-SNAPSHOT-a41f211-40328682308`. Configure authenticated
 access to the utilities GitHub Packages repository in your Maven settings;
-the shared CI setup action configures it from the package credentials.
+the shared CI setup action uses package credentials when configured and falls
+back to the GitHub Actions token. The utilities packages must allow this
+repository's workflows to read them.
 Dependency/plugin versions and quality gates come from that parent. See
 [Maven standards and pipelines](docs/maven-standards.md) for bootstrap,
 inheritance checks and release prerequisites.

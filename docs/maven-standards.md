@@ -55,7 +55,9 @@ The root parent and `utilities.version` both use the published utilities build
 Checkstyle and SpotBugs resources aligned with the parent. Maven settings need
 authenticated access to `https://maven.pkg.github.com/CyborgCodeSyndicate/utilities`
 using server ID `github-utilities`. The shared CI setup action configures this
-repository when package credentials are supplied.
+repository using `GH_PACKAGES_USER`/`GH_PACKAGES_PAT` when configured, or the
+GitHub Actions actor/token otherwise. Cross-repository access must be allowed
+for the utilities packages when using the Actions token.
 
 With JDK 21 on PATH, run in the Optimizer checkout (Windows: use `mvnw.cmd`):
 
@@ -93,7 +95,8 @@ here is a development version. Before a production release, publish a stable
 utilities parent and static-data version, update both the Optimizer parent and
 `utilities.version`, and pin workflow references to the corresponding release tag.
 
-GitHub Packages needs `GH_PACKAGES_USER` and `GH_PACKAGES_PAT`. PR analysis needs
+GitHub Packages can use `GH_PACKAGES_USER` and `GH_PACKAGES_PAT`, or the workflow
+token with access to the utilities packages. PR analysis needs
 `NVD_API_KEY`, `SONAR_TOKEN` and the SonarCloud project
 `CyborgCodeSyndicate_pandora-optimizer` in `cyborgcodesyndicate`. Central needs
 `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_TOKEN`, `GPG_PRIVATE_KEY` and
