@@ -28,4 +28,20 @@ jobs:
           build-mode: manual
       - name: Compile Java modules
         run: mvn -B -ntp -DskipTests package
+      - name: Test CodeQL findings gate
+        run: python3 -m unittest discover -s scripts/tests -v
       - uses: github/codeql-action/analyze@v4
+        with:
+          # This private repository has no Advanced Security code-scanning upload entitlement.
+          # Keep the complete analysis and enforce its results using the SARIF report below.
+          upload: never
+          output: codeql-results
+      - name: Require a clean CodeQL report
+        run: python3 scripts/check_codeql_sarif.py codeql-results
+      - name: Save CodeQL results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: codeql-results/*.sarif
+          if-no-files-found: error

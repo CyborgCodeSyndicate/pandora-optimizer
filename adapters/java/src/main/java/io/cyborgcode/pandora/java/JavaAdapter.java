@@ -109,9 +109,9 @@ public final class JavaAdapter implements LanguageAdapter {
 
       private final Set<String> unresolved = new HashSet<>();
 
-      Session(ScanRequest request) {
+      Session(ScanRequest request) throws IOException {
          this.request = request;
-         root = Path.of(request.root()).toAbsolutePath().normalize();
+         root = Path.of(request.root()).toRealPath();
       }
 
       ScanResult scan() throws IOException {
