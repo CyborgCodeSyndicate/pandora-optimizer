@@ -39,5 +39,5 @@ jobs:
           use_rc: ${{ inputs.use_rc || false }}
           modules: ${{ inputs.modules }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_packages_user: ${{ secrets.GH_PACKAGES_USER }}
-          github_packages_token: ${{ secrets.GH_PACKAGES_PAT }}
+          github_packages_user: ${{ secrets.GH_PACKAGES_USER || github.actor }}
+          github_packages_token: ${{ secrets.GH_PACKAGES_PAT || github.token }}
