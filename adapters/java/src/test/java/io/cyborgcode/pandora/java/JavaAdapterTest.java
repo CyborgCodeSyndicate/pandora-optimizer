@@ -183,4 +183,105 @@ class JavaAdapterTest {
                         .orElseThrow();
         assertEquals(List.of("demo.Endpoint"), implementation.supertypes());
     }
+    @Test
+    void capturesRecordPropertiesAnnotationMembersAndInheritedPublicSurface() throws Exception {
+        var result = scan(header + """
+            interface Contract {}
+            @AiCompass(description="record")
+            record Example(@AiCompass(description="component") String key) implements Contract {}
+            @AiCompass(description="settings")
+            @interface Settings { String value(); }
+            @AiCompass(description="client")
+            class Client extends java.util.ArrayList<String> implements Contract {
+                public String first, second;
+                public Client(String key) {}
+                protected void execute(String... values) {}
+                private void internal() {}
+            }
+            """);
+        assertTrue(result.symbols().stream().anyMatch(s -> s.kind().equals("PROPERTY") && s.name().equals("key")));
+        assertTrue(result.symbols().stream().anyMatch(s -> s.kind().equals("ANNOTATION")));
+        assertTrue(result.symbols().stream().anyMatch(s -> s.qualifiedName().equals("demo.Settings.value")));
+        assertEquals(2, result.symbols().stream().filter(s -> s.kind().equals("FIELD")).count());
+        var method = result.symbols().stream().filter(s -> s.name().equals("execute")).findFirst().orElseThrow();
+        assertTrue(method.parameters().getFirst().variadic());
+        assertEquals("java.lang.String[]", method.parameters().getFirst().type());
+        assertTrue(result.symbols().stream().noneMatch(s -> s.name().equals("internal")));
+        assertEquals(List.of("java.util.ArrayList", "demo.Contract"), result.symbols().stream().filter(s -> s.name().equals("Client")).findFirst().orElseThrow().supertypes());
+    }
+
+    @Test
+    void resolvesSourceConstantsSingularValuesAndTextBlocksWithoutExecution() throws Exception {
+        var result = scan(header + """
+            class Constants { static final String DESCRIPTION = "preserve " + "retries"; }
+            @AiCompass(description=Constants.DESCRIPTION, creation=CreationKind.BUILDER,
+                preference=Preference.PREFER, tags="retry", examples="usage")
+            class Example {
+                static final String CATEGORY = "ser" + "vice";
+                @AiLesson(category=CATEGORY, description="safe " + "operation", tags="retry", related="Other")
+                @AiCompassOptions(values="fast", source="modes", pointer="/values",
+                    implementationsOf=external.Contract.class, meta=@AiCompassOptions.Meta(key="kind",value="mode"))
+                void run() {}
+            }
+            """);
+        var type = result.symbols().stream().filter(s -> s.name().equals("Example")).findFirst().orElseThrow();
+        assertEquals("preserve retries", type.compass().description());
+        assertEquals("BUILDER", type.compass().creation());
+        assertEquals("PREFER", type.compass().preference());
+        assertEquals(List.of("retry"), type.compass().tags());
+        var method = result.symbols().stream().filter(s -> s.name().equals("run")).findFirst().orElseThrow();
+        assertEquals("service", method.lesson().category());
+        assertEquals("safe operation", method.lesson().description());
+        assertEquals(List.of("Other"), method.lesson().related());
+        assertEquals("external.Contract", method.compass().options().getFirst().implementationsOf());
+        assertEquals("mode", method.compass().extra().get("kind"));
+        String block = "\"\"\"\nblock description\n\"\"\"";
+        result = scan(header + "@AiCompass(description=" + block + ") class Example {}");
+        assertEquals("block description\n", result.symbols().getFirst().compass().description());
+    }
+
+    @Test
+    void recognizesQualifiedExplicitAndSamePackageMarkers() throws Exception {
+        assertNotNull(scan("@io.cyborgcode.pandora.annotations.AiCompass class Example {}").symbols().getFirst().compass());
+        assertNotNull(scan("package demo; import io.cyborgcode.pandora.annotations.AiCompass; @AiCompass class Example {}").symbols().getFirst().compass());
+        assertNotNull(scan("package io.cyborgcode.pandora.annotations; @AiCompass class Example {}").symbols().getFirst().compass());
+        assertNull(scan("package demo; @another.AiCompass class Example {}").symbols().getFirst().compass());
+        var result = scan("import io.cyborgcode.pandora.annotations.*; @AiCompassOptions(implementationsOf=Contract.class) interface Example extends Missing {} ");
+        assertEquals("Contract", result.symbols().getFirst().compass().options().getFirst().implementationsOf());
+        assertEquals(List.of("Missing"), result.symbols().getFirst().supertypes());
+    }
+
+    @Test
+    void diagnosesConflictingAndUnsupportedMetadataExpressions() throws Exception {
+        var result = scan(header + """
+            @AiCompass @AiCompass(description="duplicate")
+            @AiLesson(category="service", description=UNKNOWN, level=123)
+            class Example {
+                static final int NUMBER = 42;
+                @AiCompass(description=NUMBER, preference=123) void run() {}
+                @AiCompassOptions(meta={@AiCompassOptions.Meta(key="", value="ignored")}) String value;
+            }
+            """);
+        assertTrue(result.diagnostics().stream().anyMatch(d -> d.code().equals("DUPLICATE_GUIDANCE")));
+        assertTrue(result.diagnostics().stream().filter(d -> d.code().equals("JAVA_METADATA_UNRESOLVED")).count() >= 3);
+        assertTrue(result.symbols().stream().filter(s -> s.name().equals("value")).findFirst().orElseThrow().compass().extra().isEmpty());
+    }
+
+    @Test
+    void retainsLegacyResourceReferencesAndReportsUnresolvedNativeTypes() throws Exception {
+        var result = scan("""
+            package demo;
+            import io.cyborgcode.pandora.annotation.*;
+            @Pandora(description="legacy")
+            class Example {
+                @PandoraOptions(exampleFilesPath="examples") Missing value;
+                @Pandora Missing run(Missing first, Missing second) { return null; }
+            }
+            """);
+        var field = result.symbols().stream().filter(s -> s.name().equals("value")).findFirst().orElseThrow();
+        assertEquals("partial", field.resolution());
+        assertEquals(List.of("examples"), field.compass().examples());
+        assertEquals(1, result.diagnostics().stream().filter(d -> d.code().equals("JAVA_TYPE_UNRESOLVED")).count());
+        assertEquals("partial", result.symbols().stream().filter(s -> s.name().equals("run")).findFirst().orElseThrow().resolution());
+    }
 }

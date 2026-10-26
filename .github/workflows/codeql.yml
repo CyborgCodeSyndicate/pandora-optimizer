@@ -1,0 +1,30 @@
+name: CodeQL
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  packages: read
+  security-events: write
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Maven Environment
+        uses: CyborgCodeSyndicate/utilities/pipelines/shared/setup-maven@feature/pandora-inspector-and-version-updates
+        with:
+          java_version: '21'
+          server_ids: github-pandora-optimizer
+          github_packages_user: ${{ secrets.GH_PACKAGES_USER }}
+          github_packages_token: ${{ secrets.GH_PACKAGES_PAT }}
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+      - name: Compile Java modules
+        run: mvn -B -ntp -DskipTests package
+      - uses: github/codeql-action/analyze@v4

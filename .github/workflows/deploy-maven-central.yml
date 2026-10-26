@@ -1,0 +1,25 @@
+name: Deploy to Maven Central
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version matching an existing v-prefixed release tag
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  deploy-central:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Pandora Optimizer to Maven Central
+        uses: CyborgCodeSyndicate/utilities/pipelines/deploy-maven-central@feature/pandora-inspector-and-version-updates
+        with:
+          version: ${{ inputs.version }}
+          # The reactor parent must be published because the four JAR POMs inherit it.
+          modules: '.,annotations/java,engine,adapters/java,cli'
+          java_version: '21'
+          maven_central_username: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          maven_central_token: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg_passphrase: ${{ secrets.GPG_PASSPHRASE }}

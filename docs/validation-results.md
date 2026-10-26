@@ -1,4 +1,24 @@
-# Verified status — 25 October 2026
+# Validation history
+
+## Shared utilities parent — 26 October 2026
+
+The clean Maven install passes with the inherited organization quality gates:
+67 Java tests, zero Checkstyle violations, zero SpotBugs findings and the 90%
+instruction coverage gate met in every Java module. Coverage is 100% for the
+annotation SDK, 90.84% for the engine, 96.56% for the Java adapter and 97.98%
+for the CLI. Source and Javadoc artifacts are generated and installed locally.
+
+The utilities reactor also passes its full `clean verify` with 86 tests. The
+.NET locked restore and all 10 .NET tests pass; all eight existing CLI/worker
+integration tests and both skill-package checks pass. Effective-POM validation,
+a scratch release bump to 0.2.0 and workflow lint also pass.
+
+Commands, coordinates and hosted-release prerequisites are in
+[maven-standards.md](maven-standards.md); machine-readable results are in
+[maven-standards-validation.json](maven-standards-validation.json). Hosted
+Actions, authenticated NVD/SonarCloud/CodeQL scans and deployments were not run.
+
+## Initial implementation — 25 October 2026
 
 The first Java/C# source-scanning implementation is working. This report records local execution on Windows with JDK 25 compiling the CLI for Java 21, the annotation SDK for Java 17, and .NET SDK 8.0.425.
 

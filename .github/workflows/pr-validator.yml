@@ -1,0 +1,28 @@
+name: PR Validator
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+  security-events: write
+  packages: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run PR pipeline
+        uses: CyborgCodeSyndicate/utilities/pipelines/pr-validator@feature/pandora-inspector-and-version-updates
+        with:
+          sonar_project_key: CyborgCodeSyndicate_pandora-optimizer
+          sonar_org: cyborgcodesyndicate
+          nvd_api_key: ${{ secrets.NVD_API_KEY }}
+          sonar_token: ${{ secrets.SONAR_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          java_version: '21'
+          server_ids: github-pandora-optimizer
+          github_packages_user: ${{ secrets.GH_PACKAGES_USER }}
+          github_packages_token: ${{ secrets.GH_PACKAGES_PAT }}

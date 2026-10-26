@@ -12,6 +12,15 @@ A local Java CLI that turns author-curated code annotations into context for **A
 
 Development requirements: JDK 21+, .NET SDK 8.0.400 or later in the 8.0 feature band, and Python 3.12+ only for packaging/integration checks. Maven is pinned by the wrapper. Java annotation consumers can use Java 17+. The C# annotation package targets .NET 8.
 
+The Maven reactor inherits `io.cyborgcode.utilities:parent-pom`. For these
+development branches, first install `shared-static-data` and `parent-pom` from
+the sibling utilities checkout with `mvn -B -ntp -pl shared-static-data,parent-pom install`.
+The current development parent coordinate is `0.0.0`; use the published parent
+and matching static-data version after the utilities release. Dependency/plugin
+versions and quality gates come from that parent. See
+[Maven standards and pipelines](docs/maven-standards.md) for bootstrap,
+inheritance checks and release prerequisites.
+
 Windows:
 
 ```powershell

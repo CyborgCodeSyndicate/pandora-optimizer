@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-26",
+  "utilities": {
+    "branch": "codex/pandora-optimizer-parent",
+    "baseBranch": "feature/pandora-inspector-and-version-updates",
+    "commit": "a41f211",
+    "command": "mvn -B -ntp clean verify",
+    "result": "PASS",
+    "tests": 86
+  },
+  "optimizer": {
+    "branch": "codex/utilities-parent",
+    "command": "mvnw -B -ntp clean install",
+    "result": "PASS",
+    "javaTests": 67,
+    "failures": 0,
+    "errors": 0,
+    "checkstyleViolations": 0,
+    "spotbugsFindings": 0,
+    "minimumInstructionCoveragePercent": 90,
+    "instructionCoveragePercent": {
+      "pandora-annotations": 100.0,
+      "pandora-engine": 90.84,
+      "pandora-adapter-java": 96.56,
+      "pandora-cli": 97.98
+    },
+    "dotnetTests": 10,
+    "integrationTests": 8,
+    "skillPackageCheck": "PASS",
+    "effectivePomInheritanceCheck": "PASS",
+    "scratchReleaseVersionCheck": {
+      "reactorVersion": "0.2.0",
+      "utilitiesParentVersion": "0.0.0",
+      "result": "PASS"
+    },
+    "workflowLint": "actionlint 1.7.12: PASS"
+  },
+  "notExecuted": [
+    "Hosted GitHub Actions jobs",
+    "Authenticated OWASP NVD and SonarCloud analysis",
+    "CodeQL analysis on GitHub",
+    "GitHub Packages or Maven Central deployment"
+  ],
+  "releasePrerequisite": "Publish the updated utilities parent/static-data artifacts, update the development parent and utilities.version coordinates, and pin workflow action references to the utilities release tag."
+}

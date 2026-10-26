@@ -152,4 +152,83 @@ class ConsumerOptionsTest {
         assertEquals("truncated", api.path("resolvedOptions").path("status").asText());
         assertEquals(100, api.path("resolvedOptions").path("total").asInt());
     }
+    @Test
+    void resolvesDirectEnumRulesAndReportsUnavailableEnumTypes() {
+        var symbols = Json.MAPPER.createArrayNode();
+        symbols.add(Json.MAPPER.valueToTree(type("demo.Mode", "ENUM", "library", List.of(), List.of("FAST", "SLOW"))));
+        var api = symbols.addObject().put("language", "java").put("module", "library").put("kind", "METHOD");
+        api.putObject("compass").putArray("options").addObject().put("enumType", "demo.Mode").put("render", "QUALIFIED");
+        var missing = symbols.addObject().put("language", "java").put("module", "library").put("kind", "METHOD");
+        missing.putObject("compass").putArray("options").addObject().put("enumType", "demo.Missing");
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        new Enricher(new ResourceLoader(root, Map.of(), true), 50, diagnostics).enrich(symbols);
+        assertEquals("demo.Mode.FAST", api.path("resolvedOptions").path("values").get(0).asText());
+        assertEquals("failed", missing.path("resolvedOptions").path("status").asText());
+        assertEquals(List.of("OPTIONS_ENUM"), diagnostics.stream().map(Diagnostic::code).toList());
+    }
+
+    @Test
+    void validatesResourceValuesAndFiltersOptionalUsageEntries() throws Exception {
+        java.nio.file.Files.writeString(root.resolve("values.json"), "[\"fast\",\"slow\"]");
+        java.nio.file.Files.writeString(root.resolve("examples.json"), "[{\"id\":\"unrelated\",\"code\":\"ignored\"},{\"id\":\"api\",\"code\":\"matched\"},{\"code\":\"general\"}]");
+        java.nio.file.Files.writeString(root.resolve("bad-values.json"), "[42]");
+        var specs = Map.of(
+            "values", new io.cyborgcode.pandora.config.Config.Resource("values.json", null, null, null),
+            "examples", new io.cyborgcode.pandora.config.Config.Resource("examples.json", null, null, null),
+            "bad", new io.cyborgcode.pandora.config.Config.Resource("bad-values.json", null, null, null));
+        var symbols = Json.MAPPER.createArrayNode();
+        var api = symbols.addObject().put("id", "api").put("language", "java").put("module", "library").put("kind", "METHOD");
+        var guidance = api.putObject("compass");
+        guidance.putArray("options").addObject().put("source", "values");
+        guidance.putArray("examples").add("examples");
+        var invalid = symbols.addObject().put("language", "java").put("module", "library").put("kind", "METHOD");
+        var invalidGuidance = invalid.putObject("compass");
+        invalidGuidance.putArray("options").addObject().put("source", "bad");
+        invalidGuidance.putArray("examples").add("missing-resource");
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        new Enricher(new ResourceLoader(root, specs, false), 50, diagnostics).enrich(symbols);
+        assertEquals(2, api.path("resolvedOptions").path("values").size());
+        assertEquals(2, api.path("usageExamples").size());
+        assertEquals("matched", api.path("usageExamples").get(0).path("code").asText());
+        assertEquals("failed", invalid.path("resolvedOptions").path("status").asText());
+        assertEquals(Set.of("OPTIONS_RESOURCE", "EXAMPLES_RESOURCE"), new HashSet<>(diagnostics.stream().map(Diagnostic::code).toList()));
+    }
+
+    @Test
+    void boundsUsageEntriesAndRejectsMissingExampleArrays() throws Exception {
+        var examples = Json.MAPPER.createArrayNode();
+        for (int i = 0; i < 51; i++) examples.addObject().put("code", "example " + i);
+        Json.MAPPER.writeValue(root.resolve("many.json").toFile(), examples);
+        java.nio.file.Files.writeString(root.resolve("invalid.json"), "{\"other\":[]}");
+        var specs = Map.of(
+            "many", new io.cyborgcode.pandora.config.Config.Resource("many.json", null, null, null),
+            "invalid", new io.cyborgcode.pandora.config.Config.Resource("invalid.json", null, null, null));
+        var symbols = Json.MAPPER.createArrayNode();
+        for (String name : List.of("many", "invalid")) {
+            var api = symbols.addObject().put("language", "java").put("module", "library").put("kind", "METHOD");
+            api.putObject("compass").putArray("examples").add(name);
+        }
+        List<Diagnostic> diagnostics = new ArrayList<>();
+        new Enricher(new ResourceLoader(root, specs, false), 50, diagnostics).enrich(symbols);
+        assertEquals(50, symbols.get(0).path("usageExamples").size());
+        assertEquals(0, symbols.get(1).path("usageExamples").size());
+        assertEquals(2, diagnostics.size());
+        assertTrue(diagnostics.stream().allMatch(d -> d.code().equals("EXAMPLES_RESOURCE")));
+    }
+
+    @Test
+    void handlesCyclicContractsAndInheritsFieldGuidance() {
+        var symbols = Json.MAPPER.createArrayNode();
+        var contract = (com.fasterxml.jackson.databind.node.ObjectNode) Json.MAPPER.valueToTree(type("demo.A", "INTERFACE", "library", List.of("demo.B"), List.of()));
+        contract.putObject("compass").putArray("tags").add("contract");
+        symbols.add(contract);
+        symbols.add(Json.MAPPER.valueToTree(type("demo.B", "INTERFACE", "library", List.of("demo.A"), List.of())));
+        symbols.add(Json.MAPPER.valueToTree(type("demo.Mode", "ENUM", "library", List.of("demo.A"), List.of("FAST"))));
+        var field = symbols.addObject().put("language", "java").put("module", "library").put("kind", "FIELD").put("returnType", "demo.A");
+        var api = symbols.addObject().put("language", "java").put("module", "library").put("kind", "METHOD");
+        api.putObject("compass").putArray("options").addObject().put("implementationsOf", "demo.Other");
+        new Enricher(new ResourceLoader(root, Map.of(), true), 50, new ArrayList<>()).enrich(symbols);
+        assertEquals("contract", field.path("compass").path("tags").get(0).asText());
+        assertEquals("deferred", api.path("resolvedOptions").path("status").asText());
+    }
 }

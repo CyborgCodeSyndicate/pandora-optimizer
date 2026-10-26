@@ -4,6 +4,7 @@ on:
   pull_request:
 permissions:
   contents: read
+  packages: read
 jobs:
   test:
     strategy:
@@ -13,11 +14,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Setup Maven Environment
+        uses: CyborgCodeSyndicate/utilities/pipelines/shared/setup-maven@feature/pandora-inspector-and-version-updates
         with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
+          java_version: '21'
+          server_ids: github-pandora-optimizer
+          github_packages_user: ${{ secrets.GH_PACKAGES_USER }}
+          github_packages_token: ${{ secrets.GH_PACKAGES_PAT }}
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -25,6 +28,10 @@ jobs:
         with:
           python-version: '3.12'
       - run: mvn -B -ntp verify
+      - name: Check inherited Maven standards
+        run: |
+          mvn -B -ntp help:effective-pom -Doutput=target/effective-pom.xml
+          java scripts/CheckMavenInheritance.java target/effective-pom.xml
       - run: dotnet restore PandoraOptimizer.sln --locked-mode
       - run: dotnet test PandoraOptimizer.sln --no-restore --collect:"XPlat Code Coverage"
       - run: python -m pip install -r tests/integration/requirements.txt
