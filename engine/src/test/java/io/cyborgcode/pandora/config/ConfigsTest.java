@@ -68,6 +68,6 @@ class ConfigsTest {
         assertThrows(IOException.class, () -> SourceFiles.list(root, List.of("../escape"), ".java"));
         assertThrows(IOException.class, () -> SourceFiles.list(root, List.of("missing"), ".java"));
         Files.writeString(root.resolve("Example.java"), "class Example {}");
-        assertEquals(List.of(root.resolve("Example.java")), SourceFiles.list(root, List.of("Example.java"), ".java"));
+        assertEquals(List.of(root.resolve("Example.java").toRealPath()), SourceFiles.list(root, List.of("Example.java"), ".java"));
     }
 }
