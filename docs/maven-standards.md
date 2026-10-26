@@ -49,20 +49,15 @@ redaction, and handle filesystem-root workspace names and export directories.
 
 ## Local bootstrap and checks
 
-The utilities branch is `codex/pandora-optimizer-parent`, created from
-`feature/pandora-inspector-and-version-updates`. Optimizer changes are on
-`codex/utilities-parent`. These development POMs use utilities version `0.0.0`,
-matching the source branch. They require a local install until a real utilities
-release containing this management is published.
+The root parent and `utilities.version` both use the published utilities build
+`0.0.0-SNAPSHOT-a41f211-40328682308`, produced from commit `a41f211`.
+`shared-static-data.version` follows `utilities.version`, keeping the shared
+Checkstyle and SpotBugs resources aligned with the parent. Maven settings need
+authenticated access to `https://maven.pkg.github.com/CyborgCodeSyndicate/utilities`
+using server ID `github-utilities`. The shared CI setup action configures this
+repository when package credentials are supplied.
 
-With JDK 21 on PATH, run in the utilities checkout:
-
-```sh
-mvn -B -ntp -pl shared-static-data,parent-pom install
-mvn -B -ntp clean verify
-```
-
-Then run in the Optimizer checkout (Windows: use `mvnw.cmd`):
+With JDK 21 on PATH, run in the Optimizer checkout (Windows: use `mvnw.cmd`):
 
 ```sh
 ./mvnw -B -ntp clean install
@@ -92,11 +87,11 @@ SpotBugs reports retain the shared conventions.
 - `codeql.yml` follows the ROA manual-build pattern with Java 21 and the shared
   Maven setup action.
 
-The workflow action references currently use the existing utilities feature
-branch named above. Before enabling publication, release the modified utilities
-parent and static-data artifact, update both the Optimizer parent version and
-`utilities.version` to that release, and pin workflow references to its release
-tag. Do not deploy the in-development `0.0.0` coordinate as a production parent.
+The workflow actions still reference
+`feature/pandora-inspector-and-version-updates`. The utilities build consumed
+here is a development version. Before a production release, publish a stable
+utilities parent and static-data version, update both the Optimizer parent and
+`utilities.version`, and pin workflow references to the corresponding release tag.
 
 GitHub Packages needs `GH_PACKAGES_USER` and `GH_PACKAGES_PAT`. PR analysis needs
 `NVD_API_KEY`, `SONAR_TOKEN` and the SonarCloud project

@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.cyborgcode.utilities</groupId>
         <artifactId>parent-pom</artifactId>
-        <version>0.0.0</version>
+        <version>0.0.0-SNAPSHOT-a41f211-40328682308</version>
         <relativePath/>
     </parent>
     <groupId>io.cyborgcode.pandora</groupId>
@@ -23,7 +23,7 @@
     </modules>
     <properties>
         <github.repo.name>pandora-optimizer</github.repo.name>
-        <utilities.version>0.0.0</utilities.version>
+        <utilities.version>0.0.0-SNAPSHOT-a41f211-40328682308</utilities.version>
         <shared-static-data.version>${utilities.version}</shared-static-data.version>
         <java.version>21</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
