@@ -20,7 +20,7 @@ import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Resolves named JSON resources with schema validation and content-addressed caching.
@@ -37,7 +37,7 @@ public final class ResourceLoader {
 
    private final List<ResourceProvider> providers;
 
-   private final Function<String, String> environment;
+   private final UnaryOperator<String> environment;
 
    private final boolean offline;
 
@@ -56,7 +56,7 @@ public final class ResourceLoader {
          Map<String, Config.Resource> specs,
          boolean offline,
          List<ResourceProvider> providers,
-         Function<String, String> environment) {
+         UnaryOperator<String> environment) {
       this.root = root;
       this.specs = specs;
       this.offline = offline;
@@ -103,56 +103,12 @@ public final class ResourceLoader {
                            + Objects.toString(spec.bearerTokenEnv(), ""));
          Path cacheDirectory = root.resolve("pandora/cache/resources");
          Path cache = cacheDirectory.resolve(key + ".json");
-         byte[] bytes;
          boolean local = uri.getScheme() == null || "file".equals(uri.getScheme());
-         if (offline && !local) {
-            if (!Files.isRegularFile(cache)) {
-               throw new IOException("No offline cache");
-            }
-            if (Files.size(cache) > MAX_BYTES) {
-               throw new IOException("Cached resource exceeds size limit");
-            }
-            bytes = Files.readAllBytes(cache);
-         } else {
-            Map<String, String> headers = new HashMap<>();
-            if (Configs.present(spec.bearerTokenEnv())) {
-               if (local) {
-                  throw new IOException(
-                        "Bearer authentication is only valid for remote resources");
-               }
-               String token = environment.apply(spec.bearerTokenEnv());
-               if (token == null || token.isBlank()) {
-                  throw new IOException("Authentication environment variable is missing");
-               }
-               headers.put("Authorization", "Bearer " + token);
-            }
-            ResourceProvider provider =
-                  providers.stream()
-                        .filter(p -> p.supports(uri))
-                        .findFirst()
-                        .orElseThrow(() -> new IOException("Unsupported resource scheme"));
-            bytes = provider.read(uri, root, headers, MAX_BYTES);
-            if (bytes.length > MAX_BYTES) {
-               throw new IOException("Resource exceeds size limit");
-            }
-         }
+         byte[] bytes = offline && !local ? readCache(cache) : readResource(uri, spec, local);
          String hash = Hashes.sha256(bytes);
-         if (Configs.present(spec.sha256()) && !hash.equalsIgnoreCase(spec.sha256())) {
-            throw new IOException("SHA-256 mismatch");
-         }
-         JsonNode json = Json.MAPPER.readTree(bytes);
-         if (json == null || (!json.isArray() && !json.isObject())) {
-            throw new IOException("Expected a JSON object or array");
-         }
+         JsonNode json = validateResource(bytes, spec, hash);
          if (!local && !offline) {
-            Files.createDirectories(cacheDirectory);
-            Path temp = Files.createTempFile(cacheDirectory, "resource-", ".tmp");
-            try {
-               Files.write(temp, bytes);
-               Files.move(temp, cache, StandardCopyOption.REPLACE_EXISTING);
-            } finally {
-               Files.deleteIfExists(temp);
-            }
+            cacheResource(cacheDirectory, cache, bytes);
          }
          fingerprints.put(id, hash);
          loaded.put(id, json);
@@ -165,6 +121,60 @@ public final class ResourceLoader {
                      ? e.getMessage()
                      : "Invalid resource data or endpoint";
          throw new IOException("Resource '" + id + "': " + reason);
+      }
+   }
+
+   private static JsonNode validateResource(byte[] bytes, Config.Resource spec, String hash)
+         throws IOException {
+      if (Configs.present(spec.sha256()) && !hash.equalsIgnoreCase(spec.sha256())) {
+         throw new IOException("SHA-256 mismatch");
+      }
+      JsonNode json = Json.MAPPER.readTree(bytes);
+      if (json == null || (!json.isArray() && !json.isObject())) {
+         throw new IOException("Expected a JSON object or array");
+      }
+      return json;
+   }
+
+   private static byte[] readCache(Path cache) throws IOException {
+      if (!Files.isRegularFile(cache)) {
+         throw new IOException("No offline cache");
+      }
+      if (Files.size(cache) > MAX_BYTES) {
+         throw new IOException("Cached resource exceeds size limit");
+      }
+      return Files.readAllBytes(cache);
+   }
+
+   private byte[] readResource(URI uri, Config.Resource spec, boolean local) throws IOException {
+      Map<String, String> headers = new HashMap<>();
+      if (Configs.present(spec.bearerTokenEnv())) {
+         if (local) {
+            throw new IOException("Bearer authentication is only valid for remote resources");
+         }
+         String token = environment.apply(spec.bearerTokenEnv());
+         if (token == null || token.isBlank()) {
+            throw new IOException("Authentication environment variable is missing");
+         }
+         headers.put("Authorization", "Bearer " + token);
+      }
+      ResourceProvider provider = providers.stream().filter(p -> p.supports(uri)).findFirst()
+            .orElseThrow(() -> new IOException("Unsupported resource scheme"));
+      byte[] bytes = provider.read(uri, root, headers, MAX_BYTES);
+      if (bytes.length > MAX_BYTES) {
+         throw new IOException("Resource exceeds size limit");
+      }
+      return bytes;
+   }
+
+   private static void cacheResource(Path directory, Path cache, byte[] bytes) throws IOException {
+      Files.createDirectories(directory);
+      Path temp = Files.createTempFile(directory, "resource-", ".tmp");
+      try {
+         Files.write(temp, bytes);
+         Files.move(temp, cache, StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+         Files.deleteIfExists(temp);
       }
    }
 }

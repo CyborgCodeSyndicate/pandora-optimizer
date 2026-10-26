@@ -38,24 +38,30 @@ public final class Configs {
       }
       Set<String> ids = new HashSet<>();
       for (var m : c.modules()) {
-         if (m.id() == null || !m.id().matches("[A-Za-z0-9._-]+") || !ids.add(m.id())) {
-            throw new IOException("Module IDs must be valid and unique");
-         }
-         if (m.language() == null || m.language().isBlank() || m.sourceRoots().isEmpty()) {
-            throw new IOException("Each module needs language and sourceRoots");
-         }
+         validateModule(m, ids);
       }
       for (var entry : c.resources().entrySet()) {
-         var r = entry.getValue();
-         if (r == null || (present(r.uri()) == present(r.uriEnv()))) {
-            throw new IOException(
-                  "Resource " + entry.getKey() + " needs exactly one of uri or uriEnv");
-         }
-         if (present(r.sha256()) && !r.sha256().matches("[0-9a-fA-F]{64}")) {
-            throw new IOException("Invalid SHA-256 for resource " + entry.getKey());
-         }
+         validateResource(entry.getKey(), entry.getValue());
       }
       return c;
+   }
+
+   private static void validateModule(Config.Module m, Set<String> ids) throws IOException {
+      if (m.id() == null || !m.id().matches("[A-Za-z0-9._-]+") || !ids.add(m.id())) {
+         throw new IOException("Module IDs must be valid and unique");
+      }
+      if (m.language() == null || m.language().isBlank() || m.sourceRoots().isEmpty()) {
+         throw new IOException("Each module needs language and sourceRoots");
+      }
+   }
+
+   private static void validateResource(String id, Config.Resource r) throws IOException {
+      if (r == null || (present(r.uri()) == present(r.uriEnv()))) {
+         throw new IOException("Resource " + id + " needs exactly one of uri or uriEnv");
+      }
+      if (present(r.sha256()) && !r.sha256().matches("[0-9a-fA-F]{64}")) {
+         throw new IOException("Invalid SHA-256 for resource " + id);
+      }
    }
 
    /** Reports whether a configuration string contains non-whitespace text. */

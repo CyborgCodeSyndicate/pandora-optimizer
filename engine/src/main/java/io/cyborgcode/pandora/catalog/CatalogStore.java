@@ -22,6 +22,12 @@ import java.util.UUID;
  */
 public final class CatalogStore {
 
+   private static final String COMPASS = "compass";
+
+   private static final String GENERATIONS = "generations";
+
+   private static final String LESSON = "lesson";
+
    private final Path output;
 
    /** Selects the generated catalog directory for a workspace. */
@@ -31,24 +37,24 @@ public final class CatalogStore {
 
    /** Atomically publishes the catalog and its Teacher and Navigator indexes. */
    public void write(ObjectNode catalog) throws IOException {
-      Files.createDirectories(output.resolve("generations"));
+      Files.createDirectories(output.resolve(GENERATIONS));
       String generation = UUID.randomUUID().toString();
-      Path dir = output.resolve("generations").resolve(generation);
+      Path dir = output.resolve(GENERATIONS).resolve(generation);
       Files.createDirectory(dir);
       Json.MAPPER.writeValue(dir.resolve("catalog.json").toFile(), catalog);
       ArrayNode teacher = Json.MAPPER.createArrayNode();
       ArrayNode navigator = Json.MAPPER.createArrayNode();
       Map<String, ArrayNode> categories = new TreeMap<>();
       for (JsonNode symbol : catalog.path("symbols")) {
-         if (symbol.hasNonNull("lesson")) {
+         if (symbol.hasNonNull(LESSON)) {
             teacher.add(summary(symbol));
             categories
                   .computeIfAbsent(
-                        symbol.path("lesson").path("category").asText(),
+                        symbol.path(LESSON).path("category").asText(),
                         k -> Json.MAPPER.createArrayNode())
                   .add(symbol);
          }
-         if (symbol.hasNonNull("compass") || hasParameterGuidance(symbol)) {
+         if (symbol.hasNonNull(COMPASS) || hasParameterGuidance(symbol)) {
             navigator.add(summary(symbol));
          }
       }
@@ -95,7 +101,7 @@ public final class CatalogStore {
       if (!generation.matches("[0-9a-f-]{36}")) {
          throw new IOException("Invalid generation");
       }
-      Path path = output.resolve("generations").resolve(generation).resolve("catalog.json");
+      Path path = output.resolve(GENERATIONS).resolve(generation).resolve("catalog.json");
       JsonNode node = Json.MAPPER.readTree(path.toFile());
       if (!(node instanceof ObjectNode object)) {
          throw new IOException("Invalid catalog");
@@ -106,7 +112,7 @@ public final class CatalogStore {
    /** Reports whether any parameter carries API guidance. */
    public static boolean hasParameterGuidance(JsonNode symbol) {
       for (JsonNode parameter : symbol.path("parameters")) {
-         if (parameter.hasNonNull("compass")) {
+         if (parameter.hasNonNull(COMPASS)) {
             return true;
          }
       }
@@ -124,8 +130,8 @@ public final class CatalogStore {
                   "kind",
                   "qualifiedName",
                   "signature",
-                  "lesson",
-                  "compass")) {
+                  LESSON,
+                  COMPASS)) {
          if (symbol.hasNonNull(key)) {
             n.set(key, symbol.get(key));
          }

@@ -65,6 +65,10 @@ import java.util.Set;
  */
 public final class JavaAdapter implements LanguageAdapter {
 
+   private static final String JAVA_METADATA_UNRESOLVED = "JAVA_METADATA_UNRESOLVED";
+
+   private static final String RESOLVED = "resolved";
+
    private static final Set<String> PACKAGES =
          Set.of(
                "io.cyborgcode.pandora.annotations",
@@ -80,7 +84,7 @@ public final class JavaAdapter implements LanguageAdapter {
    }
 
    @Override
-   public ScanResult scan(ScanRequest request) throws Exception {
+   public ScanResult scan(ScanRequest request) throws IOException {
       if (request.protocolVersion() != 1) {
          throw new IOException("Unsupported adapter protocol");
       }
@@ -110,7 +114,7 @@ public final class JavaAdapter implements LanguageAdapter {
          root = Path.of(request.root()).toAbsolutePath().normalize();
       }
 
-      ScanResult scan() throws Exception {
+      ScanResult scan() throws IOException {
          CombinedTypeSolver solver = new CombinedTypeSolver(new ReflectionTypeSolver(false));
          for (String source : request.sourceRoots()) {
             solver.add(new JavaParserTypeSolver(root.resolve(source)));
@@ -170,17 +174,7 @@ public final class JavaAdapter implements LanguageAdapter {
          String q = qualified(t);
          String parent =
                t.findAncestor(TypeDeclaration.class).map(x -> id(qualified(x))).orElse(null);
-         String kind =
-               t instanceof EnumDeclaration
-                     ? "ENUM"
-                     : t instanceof AnnotationDeclaration
-                           ? "ANNOTATION"
-                           : t instanceof RecordDeclaration
-                                 ? "RECORD"
-                                 : t instanceof ClassOrInterfaceDeclaration c
-                                             && c.isInterface()
-                                       ? "INTERFACE"
-                                       : "CLASS";
+         String kind = typeKind(t);
          List<String> values =
                t instanceof EnumDeclaration e
                      ? e.getEntries().stream()
@@ -204,88 +198,119 @@ public final class JavaAdapter implements LanguageAdapter {
                      lesson(t),
                      guidance,
                      values,
-                     "resolved",
+                     RESOLVED,
                      supertypes(t)));
          for (BodyDeclaration<?> member : t.getMembers()) {
-            if (member instanceof CallableDeclaration<?> callable) {
-               boolean annotated =
-                     hasGuidance(callable)
-                           || callable.getParameters().stream()
-                                 .anyMatch(this::hasGuidance);
-               if (annotated
-                     || guidance != null
-                           && (callable.isPublic()
-                                 || callable.isProtected()
-                                 || kind.equals("INTERFACE"))) {
-                  scanCallable(q, callable);
-               }
-            } else if (member instanceof FieldDeclaration field
-                  && (hasGuidance(field) || guidance != null && field.isPublic())) {
-               for (VariableDeclarator variable : field.getVariables()) {
-                  String type = typeName(variable.getType());
-                  symbols.add(
-                        new Symbol(
-                              id(q + "#" + variable.getNameAsString()),
-                              "java",
-                              request.moduleId(),
-                              "FIELD",
-                              variable.getNameAsString(),
-                              q + "." + variable.getNameAsString(),
-                              type + " " + variable.getNameAsString(),
-                              id(q),
-                              type,
-                              List.of(),
-                              location(variable),
-                              lesson(field),
-                              compass(field),
-                              List.of(),
-                              resolution(type)));
-               }
-            } else if (member instanceof AnnotationMemberDeclaration a
-                  && (hasGuidance(a) || guidance != null)) {
-               String type = typeName(a.getType());
-               String nativeId = q + "#" + a.getNameAsString() + "()";
+            scanMember(q, member, guidance != null, kind);
+         }
+         if (t instanceof RecordDeclaration recordDeclaration) {
+            scanRecordProperties(q, recordDeclaration);
+         }
+      }
+
+      String typeKind(TypeDeclaration<?> type) {
+         if (type instanceof EnumDeclaration) {
+            return "ENUM";
+         }
+         if (type instanceof AnnotationDeclaration) {
+            return "ANNOTATION";
+         }
+         if (type instanceof RecordDeclaration) {
+            return "RECORD";
+         }
+         if (type instanceof ClassOrInterfaceDeclaration declaration && declaration.isInterface()) {
+            return "INTERFACE";
+         }
+         return "CLASS";
+      }
+
+      void scanMember(String q, BodyDeclaration<?> member, boolean guidedType, String kind) {
+         if (member instanceof CallableDeclaration<?> callable) {
+            if (includeCallable(callable, guidedType, kind)) {
+               scanCallable(q, callable);
+            }
+         } else if (member instanceof FieldDeclaration field
+               && (hasGuidance(field) || guidedType && field.isPublic())) {
+            scanField(q, field);
+         } else if (member instanceof AnnotationMemberDeclaration a
+               && (hasGuidance(a) || guidedType)) {
+            scanAnnotationMember(q, a);
+         }
+      }
+
+      boolean includeCallable(CallableDeclaration<?> callable, boolean guidedType, String kind) {
+         boolean annotated = hasGuidance(callable)
+               || callable.getParameters().stream().anyMatch(this::hasGuidance);
+         boolean visible = callable.isPublic() || callable.isProtected() || kind.equals("INTERFACE");
+         return annotated || guidedType && visible;
+      }
+
+      void scanField(String q, FieldDeclaration field) {
+         for (VariableDeclarator variable : field.getVariables()) {
+            String type = typeName(variable.getType());
+            symbols.add(
+                  new Symbol(
+                        id(q + "#" + variable.getNameAsString()),
+                        "java",
+                        request.moduleId(),
+                        "FIELD",
+                        variable.getNameAsString(),
+                        q + "." + variable.getNameAsString(),
+                        type + " " + variable.getNameAsString(),
+                        id(q),
+                        type,
+                        List.of(),
+                        location(variable),
+                        lesson(field),
+                        compass(field),
+                        List.of(),
+                        resolution(type)));
+         }
+      }
+
+      void scanAnnotationMember(String q, AnnotationMemberDeclaration a) {
+         String type = typeName(a.getType());
+         String nativeId = q + "#" + a.getNameAsString() + "()";
+         symbols.add(
+               new Symbol(
+                     id(nativeId),
+                     "java",
+                     request.moduleId(),
+                     "METHOD",
+                     a.getNameAsString(),
+                     q + "." + a.getNameAsString(),
+                     a.getNameAsString() + "()",
+                     id(q),
+                     type,
+                     List.of(),
+                     location(a),
+                     lesson(a),
+                     compass(a),
+                     List.of(),
+                     resolution(type)));
+      }
+
+      void scanRecordProperties(String q, RecordDeclaration declaration) {
+         for (var p : declaration.getParameters()) {
+            if (hasGuidance(p)) {
+               String type = typeName(p.getType());
                symbols.add(
                      new Symbol(
-                           id(nativeId),
+                           id(q + "#" + p.getNameAsString()),
                            "java",
                            request.moduleId(),
-                           "METHOD",
-                           a.getNameAsString(),
-                           q + "." + a.getNameAsString(),
-                           a.getNameAsString() + "()",
+                           "PROPERTY",
+                           p.getNameAsString(),
+                           q + "." + p.getNameAsString(),
+                           type + " " + p.getNameAsString(),
                            id(q),
                            type,
                            List.of(),
-                           location(a),
-                           lesson(a),
-                           compass(a),
+                           location(p),
+                           lesson(p),
+                           compass(p),
                            List.of(),
                            resolution(type)));
-            }
-         }
-         if (t instanceof RecordDeclaration record) {
-            for (var p : record.getParameters()) {
-               if (hasGuidance(p)) {
-                  String type = typeName(p.getType());
-                  symbols.add(
-                        new Symbol(
-                              id(q + "#" + p.getNameAsString()),
-                              "java",
-                              request.moduleId(),
-                              "PROPERTY",
-                              p.getNameAsString(),
-                              q + "." + p.getNameAsString(),
-                              type + " " + p.getNameAsString(),
-                              id(q),
-                              type,
-                              List.of(),
-                              location(p),
-                              lesson(p),
-                              compass(p),
-                              List.of(),
-                              resolution(type)));
-               }
             }
          }
       }
@@ -362,11 +387,11 @@ public final class JavaAdapter implements LanguageAdapter {
                      lesson(c),
                      compass(c),
                      List.of(),
-                     resolved ? "resolved" : "partial"));
+                     resolved ? RESOLVED : "partial"));
       }
 
       String resolution(String type) {
-         return unresolved.contains(type) ? "partial" : "resolved";
+         return unresolved.contains(type) ? "partial" : RESOLVED;
       }
 
       String typeName(Type t) {
@@ -450,12 +475,7 @@ public final class JavaAdapter implements LanguageAdapter {
          }
          // Resolve source constants, without evaluating arbitrary target code.
          try {
-            Node node =
-                  e instanceof NameExpr n
-                        ? n.resolve().toAst().orElse(null)
-                        : e instanceof FieldAccessExpr f
-                              ? f.resolve().toAst().orElse(null)
-                              : null;
+            Node node = constantDeclaration(e);
             if (node instanceof FieldDeclaration field) {
                String name = e instanceof NameExpr n ? n.getNameAsString()
                      : ((FieldAccessExpr) e).getNameAsString();
@@ -473,10 +493,20 @@ public final class JavaAdapter implements LanguageAdapter {
          }
          diagnostics.add(
                Diagnostic.error(
-                     "JAVA_METADATA_UNRESOLVED",
+                     JAVA_METADATA_UNRESOLVED,
                      "Metadata must be a literal or resolvable string constant",
                      path));
          return fallback;
+      }
+
+      Node constantDeclaration(Expression expression) {
+         if (expression instanceof NameExpr name) {
+            return name.resolve().toAst().orElse(null);
+         }
+         if (expression instanceof FieldAccessExpr field) {
+            return field.resolve().toAst().orElse(null);
+         }
+         return null;
       }
 
       String literalConstant(Expression e, String fallback, int depth) {
@@ -495,7 +525,7 @@ public final class JavaAdapter implements LanguageAdapter {
          }
          diagnostics.add(
                Diagnostic.error(
-                     "JAVA_METADATA_UNRESOLVED",
+                     JAVA_METADATA_UNRESOLVED,
                      "Unsupported constant metadata expression",
                      path));
          return fallback;
@@ -523,7 +553,7 @@ public final class JavaAdapter implements LanguageAdapter {
          }
          diagnostics.add(
                Diagnostic.error(
-                     "JAVA_METADATA_UNRESOLVED", "Expected an enum constant", path));
+                     JAVA_METADATA_UNRESOLVED, "Expected an enum constant", path));
          return fallback;
       }
 
@@ -558,48 +588,7 @@ public final class JavaAdapter implements LanguageAdapter {
          Map<String, Object> extra = new LinkedHashMap<>();
          List<String> examples = new ArrayList<>(strings(f.get("examples")));
          for (var a : optionAnnotations) {
-            var o = fields(a);
-            String enumType = null;
-            String implementationsOf = null;
-            if (o.get("enumType") instanceof ClassExpr c) {
-               enumType = declaredTypeName(c.getType());
-            }
-            if (o.get("implementationsOf") instanceof ClassExpr c) {
-               implementationsOf = declaredTypeName(c.getType());
-            }
-            Expression metadata = o.get("meta");
-            List<Expression> entries =
-                  metadata instanceof ArrayInitializerExpr array
-                        ? array.getValues()
-                        : metadata == null ? List.of() : List.of(metadata);
-            for (Expression entry : entries) {
-               if (entry instanceof AnnotationExpr meta) {
-                  var pair = fields(meta);
-                  String key = text(pair.get("key"), "");
-                  if (!key.isBlank()) {
-                     extra.put(key, text(pair.get("value"), ""));
-                  }
-               }
-            }
-            if (o.containsKey("availableOptionsRule")) {
-               diagnostics.add(
-                     Diagnostic.error(
-                           "RUNTIME_RULE_UNSUPPORTED",
-                           "Legacy executable options rules require migration to"
-                                 + " declarative options",
-                           path));
-            }
-            if (o.containsKey("exampleFilesPath")) {
-               examples.add(text(o.get("exampleFilesPath"), ""));
-            }
-            options.add(
-                  new OptionSpec(
-                        strings(o.get("values")),
-                        text(o.get("source"), ""),
-                        text(o.get("pointer"), ""),
-                        enumType,
-                        implementationsOf,
-                        text(o.get("render"), "NAME")));
+            options.add(option(a, extra, examples));
          }
          return new Compass(
                text(f.get("description"), ""),
@@ -609,6 +598,55 @@ public final class JavaAdapter implements LanguageAdapter {
                examples,
                options,
                extra);
+      }
+
+      OptionSpec option(AnnotationExpr a, Map<String, Object> extra, List<String> examples) {
+         var o = fields(a);
+         String enumType = null;
+         String implementationsOf = null;
+         if (o.get("enumType") instanceof ClassExpr c) {
+            enumType = declaredTypeName(c.getType());
+         }
+         if (o.get("implementationsOf") instanceof ClassExpr c) {
+            implementationsOf = declaredTypeName(c.getType());
+         }
+         addMetadata(o.get("meta"), extra);
+         if (o.containsKey("availableOptionsRule")) {
+            diagnostics.add(
+                  Diagnostic.error(
+                        "RUNTIME_RULE_UNSUPPORTED",
+                        "Legacy executable options rules require migration to"
+                              + " declarative options",
+                        path));
+         }
+         if (o.containsKey("exampleFilesPath")) {
+            examples.add(text(o.get("exampleFilesPath"), ""));
+         }
+         return new OptionSpec(
+                     strings(o.get("values")),
+                     text(o.get("source"), ""),
+                     text(o.get("pointer"), ""),
+                     enumType,
+                     implementationsOf,
+                     text(o.get("render"), "NAME"));
+      }
+
+      void addMetadata(Expression metadata, Map<String, Object> extra) {
+         List<Expression> entries = List.of();
+         if (metadata instanceof ArrayInitializerExpr array) {
+            entries = array.getValues();
+         } else if (metadata != null) {
+            entries = List.of(metadata);
+         }
+         for (Expression entry : entries) {
+            if (entry instanceof AnnotationExpr meta) {
+               var pair = fields(meta);
+               String key = text(pair.get("key"), "");
+               if (!key.isBlank()) {
+                  extra.put(key, text(pair.get("value"), ""));
+               }
+            }
+         }
       }
    }
 }

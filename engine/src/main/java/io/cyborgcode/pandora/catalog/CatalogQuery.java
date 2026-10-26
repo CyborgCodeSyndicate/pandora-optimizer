@@ -22,6 +22,18 @@ import java.util.Locale;
  */
 public final class CatalogQuery {
 
+   private static final String COMPASS = "compass";
+
+   private static final String DIAGNOSTICS = "diagnostics";
+
+   private static final String LESSON = "lesson";
+
+   private static final String QUALIFIED_NAME = "qualifiedName";
+
+   private static final String SOURCE_STATUS = "sourceStatus";
+
+   private static final String TEACHER = "teacher";
+
    private final Path root;
 
    private final ObjectNode catalog;
@@ -42,25 +54,7 @@ public final class CatalogQuery {
       String[] words = query.toLowerCase(Locale.ROOT).trim().split("\\s+");
       List<JsonNode> matches = new ArrayList<>();
       for (JsonNode symbol : catalog.path("symbols")) {
-         if (!belongs(symbol, domain)) {
-            continue;
-         }
-         JsonNode guidance = symbol.path(domain.equals("teacher") ? "lesson" : "compass");
-         if (!includeBad
-               && domain.equals("teacher")
-               && guidance.path("level").asText().equals("BAD")) {
-            continue;
-         }
-         if (!category.isBlank() && !guidance.path("category").asText().equals(category)) {
-            continue;
-         }
-         if (!tag.isBlank() && !contains(guidance.path("tags"), tag)) {
-            continue;
-         }
-         String searchable =
-               (symbol.path("qualifiedName").asText() + " " + guidance.toString())
-                     .toLowerCase(Locale.ROOT);
-         if (Arrays.stream(words).allMatch(searchable::contains)) {
+         if (matches(symbol, domain, words, category, tag, includeBad)) {
             matches.add(symbol);
          }
       }
@@ -82,10 +76,10 @@ public final class CatalogQuery {
                                  "language",
                                  "module",
                                  "kind",
-                                 "qualifiedName",
+                                 QUALIFIED_NAME,
                                  "signature",
-                                 "lesson",
-                                 "compass",
+                                 LESSON,
+                                 COMPASS,
                                  "origin")) {
                         if (s.hasNonNull(field)) {
                            summary.set(field, s.get(field));
@@ -96,13 +90,33 @@ public final class CatalogQuery {
       return result;
    }
 
+   private static boolean matches(
+         JsonNode symbol, String domain, String[] words, String category, String tag,
+         boolean includeBad) {
+      if (!belongs(symbol, domain)) {
+         return false;
+      }
+      JsonNode guidance = symbol.path(domain.equals(TEACHER) ? LESSON : COMPASS);
+      if (!includeBad && domain.equals(TEACHER)
+            && guidance.path("level").asText().equals("BAD")) {
+         return false;
+      }
+      if ((!category.isBlank() && !guidance.path("category").asText().equals(category))
+            || (!tag.isBlank() && !contains(guidance.path("tags"), tag))) {
+         return false;
+      }
+      String searchable = (symbol.path(QUALIFIED_NAME).asText() + " " + guidance)
+            .toLowerCase(Locale.ROOT);
+      return Arrays.stream(words).allMatch(searchable::contains);
+   }
+
    /** Returns one exact symbol and optionally verifies and reads its local source. */
    public ObjectNode show(String domain, String id, boolean source) throws IOException {
       List<JsonNode> found = new ArrayList<>();
       for (JsonNode s : catalog.path("symbols")) {
          if (belongs(s, domain)
                && (s.path("id").asText().equals(id)
-                     || s.path("qualifiedName").asText().equals(id))) {
+                     || s.path(QUALIFIED_NAME).asText().equals(id))) {
             found.add(s);
          }
       }
@@ -116,35 +130,37 @@ public final class CatalogQuery {
       ObjectNode symbol = found.getFirst().deepCopy();
       result.set("item", symbol);
       if (source) {
-         if (!symbol.path("origin").asText().equals("workspace")) {
-            result.put("sourceStatus", "unavailable-for-imported-catalog");
-         } else {
-            JsonNode location = symbol.path("source");
-            Path path = root.resolve(location.path("path").asText()).normalize().toRealPath();
-            if (!path.startsWith(root)) {
-               throw new IOException("Source path escapes workspace");
-            }
-            if (Files.size(path) > 1024 * 1024) {
-               throw new IOException("Source exceeds display size limit");
-            }
-            byte[] bytes = Files.readAllBytes(path);
-            if (!Hashes.sha256(bytes).equals(location.path("sha256").asText())) {
-               result.put("sourceStatus", "stale");
-               return result;
-            }
-            List<String> lines = Files.readAllLines(path);
-            int start = location.path("startLine").asInt() - 1;
-            int end = Math.min(location.path("endLine").asInt(), start + 200);
-            if (start < 0 || end > lines.size() || end < start) {
-               throw new IOException("Invalid source range");
-            }
-            result.put("source", String.join("\n", lines.subList(start, end)));
-            result.put(
-                  "sourceStatus",
-                  end < location.path("endLine").asInt() ? "truncated" : "complete");
-         }
+         addSource(result, symbol);
       }
       return result;
+   }
+
+   private void addSource(ObjectNode result, JsonNode symbol) throws IOException {
+      if (!symbol.path("origin").asText().equals("workspace")) {
+         result.put(SOURCE_STATUS, "unavailable-for-imported-catalog");
+         return;
+      }
+      JsonNode location = symbol.path("source");
+      Path path = root.resolve(location.path("path").asText()).normalize().toRealPath();
+      if (!path.startsWith(root)) {
+         throw new IOException("Source path escapes workspace");
+      }
+      if (Files.size(path) > 1024 * 1024) {
+         throw new IOException("Source exceeds display size limit");
+      }
+      byte[] bytes = Files.readAllBytes(path);
+      if (!Hashes.sha256(bytes).equals(location.path("sha256").asText())) {
+         result.put(SOURCE_STATUS, "stale");
+         return;
+      }
+      List<String> lines = Files.readAllLines(path);
+      int start = location.path("startLine").asInt() - 1;
+      int end = Math.min(location.path("endLine").asInt(), start + 200);
+      if (start < 0 || end > lines.size() || end < start) {
+         throw new IOException("Invalid source range");
+      }
+      result.put("source", String.join("\n", lines.subList(start, end)));
+      result.put(SOURCE_STATUS, end < location.path("endLine").asInt() ? "truncated" : "complete");
    }
 
    /** Reports catalog freshness, offline state and bounded diagnostics. */
@@ -164,10 +180,10 @@ public final class CatalogQuery {
       n.put("freshness", stale ? "stale" : "current-local-inputs");
       n.put("remoteFreshness", "as-of-last-scan");
       n.put("offline", catalog.path("offline").asBoolean());
-      n.put("diagnosticCount", catalog.path("diagnostics").size());
-      ArrayNode diagnostics = n.putArray("diagnostics");
-      for (int i = 0; i < Math.min(20, catalog.path("diagnostics").size()); i++) {
-         diagnostics.add(catalog.path("diagnostics").get(i));
+      n.put("diagnosticCount", catalog.path(DIAGNOSTICS).size());
+      ArrayNode diagnostics = n.putArray(DIAGNOSTICS);
+      for (int i = 0; i < Math.min(20, catalog.path(DIAGNOSTICS).size()); i++) {
+         diagnostics.add(catalog.path(DIAGNOSTICS).get(i));
       }
       return n;
    }
@@ -178,9 +194,9 @@ public final class CatalogQuery {
    }
 
    private static boolean belongs(JsonNode s, String domain) {
-      return domain.equals("teacher")
-            ? s.hasNonNull("lesson")
-            : s.hasNonNull("compass") || CatalogStore.hasParameterGuidance(s);
+      return domain.equals(TEACHER)
+            ? s.hasNonNull(LESSON)
+            : s.hasNonNull(COMPASS) || CatalogStore.hasParameterGuidance(s);
    }
 
    private static boolean contains(JsonNode array, String text) {
@@ -193,14 +209,14 @@ public final class CatalogQuery {
    }
 
    private static int rank(JsonNode s, String domain) {
-      if (domain.equals("teacher")) {
-         return switch (s.path("lesson").path("level").asText()) {
+      if (domain.equals(TEACHER)) {
+         return switch (s.path(LESSON).path("level").asText()) {
             case "EXCELLENT" -> 0;
             case "GOOD" -> 1;
             default -> 2;
          };
       }
-      return switch (s.path("compass").path("preference").asText()) {
+      return switch (s.path(COMPASS).path("preference").asText()) {
          case "PREFER" -> 0;
          case "AVOID" -> 2;
          case "FORBID" -> 3;

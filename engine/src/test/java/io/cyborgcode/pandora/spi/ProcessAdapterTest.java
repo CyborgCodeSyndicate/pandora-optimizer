@@ -62,4 +62,25 @@ class ProcessAdapterTest {
         command.clear();
         assertThrows(IOException.class, () -> adapter.scan(request()));
     }
+
+    @Test void reportsOversizedWorkerErrorOutputAsAnIoFailure() throws Exception {
+        Path source = root.resolve("NoisyWorker.java");
+        Files.writeString(source, """
+            public class NoisyWorker {
+                public static void main(String[] args) throws Exception {
+                    System.in.readAllBytes();
+                    System.out.println(args[0]);
+                    System.err.write(new byte[1024 * 1024 + 1]);
+                    System.err.flush();
+                }
+            }
+            """);
+        String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
+        var adapter = new ProcessAdapter("custom", List.of(
+                Path.of(System.getProperty("java.home"), "bin", executable).toString(), source.toString(),
+                "{\"protocolVersion\":1,\"symbols\":[],\"diagnostics\":[]}"));
+        var failure = assertThrows(IOException.class, () -> adapter.scan(request()));
+        assertEquals("Adapter communication failed", failure.getMessage());
+        assertInstanceOf(java.util.concurrent.ExecutionException.class, failure.getCause());
+    }
 }

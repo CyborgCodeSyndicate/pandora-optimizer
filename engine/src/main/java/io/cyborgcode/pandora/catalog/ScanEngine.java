@@ -39,6 +39,10 @@ import java.util.TreeSet;
  */
 public final class ScanEngine {
 
+   private static final String CSHARP = "csharp";
+
+   private static final String DIAGNOSTICS = "diagnostics";
+
    public static final String VERSION = "0.1.0";
 
    private final Map<String, LanguageAdapter> adapters = new HashMap<>();
@@ -53,7 +57,7 @@ public final class ScanEngine {
     * Scans a locked workspace and publishes a validated catalog, optionally reusing fresh output.
     */
    public ObjectNode scan(Path root, boolean offline, boolean ifStale, boolean strict)
-         throws Exception {
+         throws IOException, InterruptedException {
       root = root.toRealPath();
       Config config = Configs.read(root);
       Files.createDirectories(root.resolve("pandora/cache"));
@@ -74,88 +78,116 @@ public final class ScanEngine {
          String fingerprint =
                Hashes.sha256(local + Json.MAPPER.writeValueAsString(resources.fingerprints()));
          CatalogStore store = new CatalogStore(root);
-         if (ifStale) {
-            try {
-               ObjectNode old = store.read();
-               if (old.path("fingerprint").asText().equals(fingerprint)
-                     && (!strict || old.path("diagnostics").isEmpty())) {
-                  return old;
-               }
-            } catch (IOException ignored) {
-               /* first scan */
-            }
+         ObjectNode reusable = ifStale ? reusableCatalog(store, fingerprint, strict) : null;
+         if (reusable != null) {
+            return reusable;
          }
          List<Diagnostic> diagnostics = new ArrayList<>();
          ArrayNode symbols = Json.MAPPER.createArrayNode();
-         for (var module : config.modules()) {
-            LanguageAdapter adapter = adapter(module);
-            ScanResult result =
-                  adapter.scan(
-                        new ScanRequest(
-                              1,
-                              config.workspaceId(),
-                              module.id(),
-                              root.toString(),
-                              module.sourceRoots(),
-                              module.references()));
-            if (result.protocolVersion() != 1) {
-               throw new IOException("Adapter protocol mismatch");
-            }
-            diagnostics.addAll(result.diagnostics());
-            for (Symbol symbol : result.symbols()) {
-               if (!symbol.language().equals(module.language())
-                     || !symbol.module().equals(module.id())) {
-                  throw new IOException("Adapter returned the wrong module/language");
-               }
-               ObjectNode node = Json.MAPPER.valueToTree(symbol);
-               node.put("origin", "workspace");
-               symbols.add(node);
-            }
-         }
-         for (String resource : config.catalogs()) {
-            JsonNode catalog = resources.load(resource);
-            List<Diagnostic> errors = CatalogValidator.validate(catalog);
-            if (!errors.isEmpty()) {
-               throw new IOException("Invalid dependency catalog: " + resource);
-            }
-            for (JsonNode diagnostic : catalog.path("diagnostics")) {
-               diagnostics.add(Json.MAPPER.treeToValue(diagnostic, Diagnostic.class));
-            }
-            for (JsonNode symbol : catalog.path("symbols")) {
-               ObjectNode imported = symbol.deepCopy();
-               imported.put("origin", "catalog:" + resource);
-               symbols.add(imported);
-            }
-         }
-         // Imported contracts are resolved against consumer facts as well as producer facts.
-         new Enricher(resources, config.maxOptions(), diagnostics).enrich(symbols);
-         List<JsonNode> sorted = new ArrayList<>();
-         symbols.forEach(sorted::add);
-         sorted.sort(Comparator.comparing(s -> s.path("id").asText()));
-         symbols.removeAll();
-         sorted.forEach(symbols::add);
-         ObjectNode catalog = Json.MAPPER.createObjectNode();
-         catalog.put("schemaVersion", 1);
-         catalog.put("producerVersion", VERSION);
-         catalog.put("workspaceId", config.workspaceId());
-         catalog.put("generatedAt", Instant.now().toString());
-         catalog.put("localFingerprint", local);
-         catalog.put("fingerprint", fingerprint);
-         catalog.put("offline", offline);
-         catalog.set("resourceFingerprints", Json.MAPPER.valueToTree(resources.fingerprints()));
-         catalog.set("symbols", symbols);
-         catalog.set("diagnostics", Json.MAPPER.valueToTree(diagnostics));
-         diagnostics.addAll(CatalogValidator.validate(catalog));
-         catalog.set("diagnostics", Json.MAPPER.valueToTree(diagnostics));
-         if (diagnostics.stream().anyMatch(d -> d.severity().equals("error"))
-               || strict && !diagnostics.isEmpty()) {
-            throw new ScanFailure(diagnostics);
-         }
+         scanModules(root, config, symbols, diagnostics);
+         importCatalogs(config, resources, symbols, diagnostics);
+         ObjectNode catalog = buildCatalog(config, resources, symbols, diagnostics,
+               local, fingerprint, offline);
+         validateDiagnostics(diagnostics, strict);
          if (!local.equals(localFingerprint(root, config))) {
             throw new IOException("Inputs changed during scanning; retry");
          }
          store.write(catalog);
          return catalog;
+      }
+   }
+
+   private static ObjectNode reusableCatalog(CatalogStore store, String fingerprint, boolean strict) {
+      try {
+         ObjectNode old = store.read();
+         if (old.path("fingerprint").asText().equals(fingerprint)
+               && (!strict || old.path(DIAGNOSTICS).isEmpty())) {
+            return old;
+         }
+      } catch (IOException ignored) {
+         /* first scan */
+      }
+      return null;
+   }
+
+   private void scanModules(Path root, Config config, ArrayNode symbols, List<Diagnostic> diagnostics)
+         throws IOException, InterruptedException {
+      for (var module : config.modules()) {
+         LanguageAdapter adapter = adapter(module);
+         ScanResult result =
+               adapter.scan(
+                     new ScanRequest(
+                           1,
+                           config.workspaceId(),
+                           module.id(),
+                           root.toString(),
+                           module.sourceRoots(),
+                           module.references()));
+         if (result.protocolVersion() != 1) {
+            throw new IOException("Adapter protocol mismatch");
+         }
+         diagnostics.addAll(result.diagnostics());
+         for (Symbol symbol : result.symbols()) {
+            if (!symbol.language().equals(module.language())
+                  || !symbol.module().equals(module.id())) {
+               throw new IOException("Adapter returned the wrong module/language");
+            }
+            ObjectNode node = Json.MAPPER.valueToTree(symbol);
+            node.put("origin", "workspace");
+            symbols.add(node);
+         }
+      }
+   }
+
+   private static void importCatalogs(Config config, ResourceLoader resources, ArrayNode symbols,
+         List<Diagnostic> diagnostics) throws IOException {
+      for (String resource : config.catalogs()) {
+         JsonNode catalog = resources.load(resource);
+         List<Diagnostic> errors = CatalogValidator.validate(catalog);
+         if (!errors.isEmpty()) {
+            throw new IOException("Invalid dependency catalog: " + resource);
+         }
+         for (JsonNode diagnostic : catalog.path(DIAGNOSTICS)) {
+            diagnostics.add(Json.MAPPER.treeToValue(diagnostic, Diagnostic.class));
+         }
+         for (JsonNode symbol : catalog.path("symbols")) {
+            ObjectNode imported = symbol.deepCopy();
+            imported.put("origin", "catalog:" + resource);
+            symbols.add(imported);
+         }
+      }
+   }
+
+   private static ObjectNode buildCatalog(Config config, ResourceLoader resources, ArrayNode symbols,
+         List<Diagnostic> diagnostics, String local, String fingerprint, boolean offline) {
+      // Imported contracts are resolved against consumer facts as well as producer facts.
+      new Enricher(resources, config.maxOptions(), diagnostics).enrich(symbols);
+      List<JsonNode> sorted = new ArrayList<>();
+      symbols.forEach(sorted::add);
+      sorted.sort(Comparator.comparing(s -> s.path("id").asText()));
+      symbols.removeAll();
+      sorted.forEach(symbols::add);
+      ObjectNode catalog = Json.MAPPER.createObjectNode();
+      catalog.put("schemaVersion", 1);
+      catalog.put("producerVersion", VERSION);
+      catalog.put("workspaceId", config.workspaceId());
+      catalog.put("generatedAt", Instant.now().toString());
+      catalog.put("localFingerprint", local);
+      catalog.put("fingerprint", fingerprint);
+      catalog.put("offline", offline);
+      catalog.set("resourceFingerprints", Json.MAPPER.valueToTree(resources.fingerprints()));
+      catalog.set("symbols", symbols);
+      catalog.set(DIAGNOSTICS, Json.MAPPER.valueToTree(diagnostics));
+      diagnostics.addAll(CatalogValidator.validate(catalog));
+      catalog.set(DIAGNOSTICS, Json.MAPPER.valueToTree(diagnostics));
+      return catalog;
+   }
+
+   private static void validateDiagnostics(List<Diagnostic> diagnostics, boolean strict)
+         throws ScanFailure {
+      if (diagnostics.stream().anyMatch(d -> d.severity().equals("error"))
+            || strict && !diagnostics.isEmpty()) {
+         throw new ScanFailure(diagnostics);
       }
    }
 
@@ -166,10 +198,10 @@ public final class ScanEngine {
       if (adapters.containsKey(module.language())) {
          return adapters.get(module.language());
       }
-      if (module.language().equals("csharp")) {
+      if (module.language().equals(CSHARP)) {
          String worker = System.getenv("PANDORA_DOTNET_ADAPTER");
          if (worker != null && !worker.isBlank()) {
-            return new ProcessAdapter("csharp", List.of("dotnet", worker));
+            return new ProcessAdapter(CSHARP, List.of("dotnet", worker));
          }
       }
       throw new IOException(
@@ -200,32 +232,7 @@ public final class ScanEngine {
       inputs.put(
             "config", Hashes.sha256(Files.readAllBytes(root.resolve("pandora/config.json"))));
       for (var module : config.modules()) {
-         // Unknown adapters still invalidate on all files under their configured roots.
-         String ext =
-               module.language().equals("java")
-                     ? ".java"
-                     : module.language().equals("csharp") ? ".cs" : "";
-         for (Path file : SourceFiles.list(root, module.sourceRoots(), ext)) {
-            inputs.put(
-                  root.relativize(file).toString(), Hashes.sha256(Files.readAllBytes(file)));
-         }
-         for (String reference : module.references()) {
-            inputs.put(
-                  "reference:" + reference,
-                  Hashes.sha256(Files.readAllBytes(root.resolve(reference))));
-         }
-         for (String argument : module.command()) {
-            Path p = root.resolve(argument);
-            if (Files.isRegularFile(p)) {
-               inputs.put("adapter:" + argument, Hashes.sha256(Files.readAllBytes(p)));
-            }
-         }
-         if (module.language().equals("csharp") && module.command().isEmpty()) {
-            String path = System.getenv("PANDORA_DOTNET_ADAPTER");
-            if (path != null) {
-               inputs.put("dotnet-worker", Hashes.sha256(Files.readAllBytes(Path.of(path))));
-            }
-         }
+         fingerprintModule(root, module, inputs);
       }
       ResourceLoader localResources = new ResourceLoader(root, config.resources(), true);
       for (var entry : config.resources().entrySet()) {
@@ -245,6 +252,37 @@ public final class ScanEngine {
          }
       }
       return Hashes.sha256(Json.MAPPER.writeValueAsString(inputs));
+   }
+
+   private static void fingerprintModule(Path root, Config.Module module, Map<String, String> inputs)
+         throws IOException {
+      // Unknown adapters still invalidate on all files under their configured roots.
+      String ext = switch (module.language()) {
+         case "java" -> ".java";
+         case CSHARP -> ".cs";
+         default -> "";
+      };
+      for (Path file : SourceFiles.list(root, module.sourceRoots(), ext)) {
+         inputs.put(
+               root.relativize(file).toString(), Hashes.sha256(Files.readAllBytes(file)));
+      }
+      for (String reference : module.references()) {
+         inputs.put(
+               "reference:" + reference,
+               Hashes.sha256(Files.readAllBytes(root.resolve(reference))));
+      }
+      for (String argument : module.command()) {
+         Path p = root.resolve(argument);
+         if (Files.isRegularFile(p)) {
+            inputs.put("adapter:" + argument, Hashes.sha256(Files.readAllBytes(p)));
+         }
+      }
+      if (module.language().equals(CSHARP) && module.command().isEmpty()) {
+         String path = System.getenv("PANDORA_DOTNET_ADAPTER");
+         if (path != null) {
+            inputs.put("dotnet-worker", Hashes.sha256(Files.readAllBytes(Path.of(path))));
+         }
+      }
    }
 
    /**

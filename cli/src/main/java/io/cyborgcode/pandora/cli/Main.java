@@ -37,6 +37,14 @@ import picocli.CommandLine;
       subcommands = {Main.Init.class, Main.Scan.class, Main.Doctor.class, Main.Validate.class})
 public final class Main implements Runnable {
 
+   private static final String DIAGNOSTICS = "diagnostics";
+
+   private static final String NAVIGATOR = "navigator";
+
+   private static final String STATUS = "status";
+
+   @Spec CommandSpec spec;
+
    @Option(
          names = "--root",
          description = "Workspace containing pandora/config.json",
@@ -51,7 +59,7 @@ public final class Main implements Runnable {
 
    @Override
    public void run() {
-      CommandLine.usage(this, System.out);
+      spec.commandLine().usage(spec.commandLine().getOut());
    }
 
    /** Executes the CLI and exits with the command's status. */
@@ -63,14 +71,14 @@ public final class Main implements Runnable {
    public static CommandLine command() {
       CommandLine cli = new CommandLine(new Main());
       cli.addSubcommand("teacher", domain("teacher"))
-            .addSubcommand("navigator", domain("navigator"));
+            .addSubcommand(NAVIGATOR, domain(NAVIGATOR));
       cli.setExecutionExceptionHandler(
             (e, c, p) -> {
                ObjectNode error = Json.MAPPER.createObjectNode();
-               error.put("status", "error");
+               error.put(STATUS, "error");
                if (e instanceof ScanEngine.ScanFailure failure) {
                   error.put("message", failure.getMessage());
-                  error.set("diagnostics", Json.MAPPER.valueToTree(failure.diagnostics()));
+                  error.set(DIAGNOSTICS, Json.MAPPER.valueToTree(failure.diagnostics()));
                } else {
                   error.put(
                         "message",
@@ -87,7 +95,7 @@ public final class Main implements Runnable {
    private static CommandLine domain(String name) {
       CommandLine command = new CommandLine(new Domain()).setCommandName(name);
       command.addSubcommand("search", new Search(name)).addSubcommand("show", new Show(name));
-      if (name.equals("navigator")) {
+      if (name.equals(NAVIGATOR)) {
          command.addSubcommand("bundle", new Bundle());
       }
       return command;
@@ -101,9 +109,11 @@ public final class Main implements Runnable {
    @Command(mixinStandardHelpOptions = true, description = "Search curated metadata")
    static class Domain implements Runnable {
 
+      @Spec CommandSpec spec;
+
       @Override
       public void run() {
-         System.out.println("Use search or show; navigator also supports bundle.");
+         spec.commandLine().getOut().println("Use search or show; navigator also supports bundle.");
       }
    }
 
@@ -135,7 +145,7 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         Path workspace = root();
+         Path workspace = super.root();
          Path directory = workspace.resolve("pandora");
          Path file = directory.resolve("config.json");
          if (Files.exists(file)) {
@@ -153,7 +163,7 @@ public final class Main implements Runnable {
                      .toList();
          Config config = new Config(1, name, modules, Map.of(), List.of(), 50);
          Files.write(file, Json.MAPPER.writeValueAsBytes(config), StandardOpenOption.CREATE_NEW);
-         print(Map.of("status", "created", "config", file.toString()));
+         print(Map.of(STATUS, "created", "config", file.toString()));
          return 0;
       }
    }
@@ -177,17 +187,17 @@ public final class Main implements Runnable {
       public Integer call() throws Exception {
          var catalog =
                new ScanEngine(List.of(new JavaAdapter()))
-                     .scan(root(), offline, ifStale, strict);
+                     .scan(super.root(), offline, ifStale, strict);
          print(
                Map.of(
-                     "status",
+                     STATUS,
                      "complete",
                      "symbols",
                      catalog.path("symbols").size(),
                      "fingerprint",
                      catalog.path("fingerprint"),
-                     "diagnostics",
-                     catalog.path("diagnostics")));
+                     DIAGNOSTICS,
+                     catalog.path(DIAGNOSTICS)));
          return 0;
       }
    }
@@ -200,7 +210,7 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         Config config = Configs.read(root());
+         Config config = Configs.read(super.root());
          ObjectNode result = Json.MAPPER.createObjectNode();
          result.put("javaRuntime", System.getProperty("java.version"));
          result.put("workspaceId", config.workspaceId());
@@ -220,7 +230,7 @@ public final class Main implements Runnable {
                missing = true;
             }
          }
-         result.put("status", missing ? "missing-adapter-configuration" : "configured");
+         result.put(STATUS, missing ? "missing-adapter-configuration" : "configured");
          result.put("note", "Configured commands are not executed by doctor.");
          print(result);
          return missing ? 2 : 0;
@@ -238,7 +248,7 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         var query = new CatalogQuery(root());
+         var query = new CatalogQuery(super.root());
          var catalog = query.bundle();
          var errors = CatalogValidator.validate(catalog);
          var status = query.envelope();
@@ -246,7 +256,7 @@ public final class Main implements Runnable {
          print(status);
          return !errors.isEmpty()
                      || status.path("freshness").asText().equals("stale")
-                     || strict && !catalog.path("diagnostics").isEmpty()
+                     || strict && !catalog.path(DIAGNOSTICS).isEmpty()
                ? 3
                : 0;
       }
@@ -281,7 +291,7 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         print(new CatalogQuery(root()).search(domain, query, category, tag, limit, includeBad));
+         print(new CatalogQuery(super.root()).search(domain, query, category, tag, limit, includeBad));
          return 0;
       }
    }
@@ -306,7 +316,7 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         print(new CatalogQuery(root()).show(domain, id, includeSource));
+         print(new CatalogQuery(super.root()).show(domain, id, includeSource));
          return 0;
       }
    }
@@ -323,11 +333,11 @@ public final class Main implements Runnable {
 
       @Override
       public Integer call() throws Exception {
-         var query = new CatalogQuery(root());
+         var query = new CatalogQuery(super.root());
          if (query.envelope().path("freshness").asText().equals("stale")) {
             throw new java.io.IOException("Catalog is stale; scan before bundling");
          }
-         Path destination = root().resolve(output).normalize();
+         Path destination = super.root().resolve(output).normalize();
          Path directory = destination.getParent();
          if (directory != null) {
             Files.createDirectories(directory);
@@ -336,7 +346,7 @@ public final class Main implements Runnable {
                destination,
                Json.MAPPER.writeValueAsBytes(query.bundle()),
                StandardOpenOption.CREATE_NEW);
-         print(Map.of("status", "written", "output", destination.toString()));
+         print(Map.of(STATUS, "written", "output", destination.toString()));
          return 0;
       }
    }

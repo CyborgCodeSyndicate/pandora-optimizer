@@ -10,8 +10,10 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Exchanges versioned JSON with a language adapter in a bounded child process.
@@ -36,7 +38,7 @@ public final class ProcessAdapter implements LanguageAdapter {
    }
 
    @Override
-   public ScanResult scan(ScanRequest request) throws Exception {
+   public ScanResult scan(ScanRequest request) throws IOException, InterruptedException {
       Process process = new ProcessBuilder(command).directory(new File(request.root())).start();
       try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
          Future<byte[]> output =
@@ -82,6 +84,8 @@ public final class ProcessAdapter implements LanguageAdapter {
                throw new IOException("Unsupported adapter protocol");
             }
             return result;
+         } catch (ExecutionException | TimeoutException e) {
+            throw new IOException("Adapter communication failed", e);
          } finally {
             process.descendants().forEach(ProcessHandle::destroyForcibly);
             process.destroyForcibly();
