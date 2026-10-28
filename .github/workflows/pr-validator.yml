@@ -28,8 +28,14 @@ jobs:
             echo "::error::Configure SONAR_TOKEN with analysis access to this SonarCloud project."
             exit 1
           fi
+          # Organization-scoped tokens authorize analysis, not the user-token
+          # validation API. The scanner validates their project scope later.
+          if [[ "$SONAR_TOKEN" == sqco_* ]]; then
+            echo "Using an organization-scoped analysis token."
+            exit 0
+          fi
           if ! curl --fail --silent --show-error --retry 2 --connect-timeout 10 --max-time 30 \
-            --user "${SONAR_TOKEN}:" https://sonarcloud.io/api/authentication/validate \
+            --header "Authorization: Bearer ${SONAR_TOKEN}" https://sonarcloud.io/api/authentication/validate \
             | jq --exit-status '.valid == true' > /dev/null; then
             echo "::error::SonarCloud authentication could not be validated. Check service availability and the repository SONAR_TOKEN secret."
             exit 1
