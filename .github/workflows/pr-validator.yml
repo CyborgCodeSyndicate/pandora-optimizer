@@ -12,8 +12,28 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      # The shared setup action installs JDK 21. Avoid the separate JRE metadata
+      # download that failed with HTTP 403; Sonar analysis and its gate still run.
+      SONAR_SCANNER_SKIP_JRE_PROVISIONING: 'true'
     steps:
       - uses: actions/checkout@v4
+      - name: Validate SonarCloud authentication before the build
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$SONAR_TOKEN" ]]; then
+            echo "::error::Configure SONAR_TOKEN with analysis access to this SonarCloud project."
+            exit 1
+          fi
+          if ! curl --fail --silent --show-error --retry 2 --connect-timeout 10 --max-time 30 \
+            --user "${SONAR_TOKEN}:" https://sonarcloud.io/api/authentication/validate \
+            | jq --exit-status '.valid == true' > /dev/null; then
+            echo "::error::SonarCloud authentication could not be validated. Check service availability and the repository SONAR_TOKEN secret."
+            exit 1
+          fi
       - name: Run PR pipeline
         uses: CyborgCodeSyndicate/utilities/pipelines/pr-validator@feature/pandora-inspector-and-version-updates
         with:
