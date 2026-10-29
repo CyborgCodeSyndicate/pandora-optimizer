@@ -53,7 +53,7 @@ class CatalogBoundariesTest {
         }
         var changing = new LanguageAdapter() {
             public String language() { return "fake"; }
-            public ScanResult scan(ScanRequest request) throws Exception {
+            public ScanResult scan(ScanRequest request) throws IOException {
                 Files.writeString(root.resolve("src/Example.txt"), "changed");
                 return new ScanResult(1, List.of(), List.of());
             }

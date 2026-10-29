@@ -22,6 +22,22 @@ import java.util.Set;
  */
 public final class Enricher {
 
+   private static final String COMPASS = "compass";
+
+   private static final String LANGUAGE = "language";
+
+   private static final String OPTIONS = "options";
+
+   private static final String QUALIFIED_NAME = "qualifiedName";
+
+   private static final String RESOLVED_OPTIONS = "resolvedOptions";
+
+   private static final String SOURCE = "source";
+
+   private static final String TRUNCATED = "truncated";
+
+   private static final String VALUES = "values";
+
    private final ResourceLoader resources;
 
    private final int maxOptions;
@@ -44,7 +60,7 @@ public final class Enricher {
       for (JsonNode symbol : symbols) {
          if (Set.of("CLASS", "INTERFACE", "RECORD", "STRUCT", "ENUM", "ANNOTATION")
                .contains(symbol.path("kind").asText())) {
-            types.put(key(symbol, symbol.path("qualifiedName").asText()), symbol);
+            types.put(key(symbol, symbol.path(QUALIFIED_NAME).asText()), symbol);
             allTypes.add(symbol);
          }
       }
@@ -58,7 +74,7 @@ public final class Enricher {
    }
 
    private String key(JsonNode context, String type) {
-      return context.path("language").asText()
+      return context.path(LANGUAGE).asText()
             + ":"
             + context.path("module").asText()
             + ":"
@@ -66,137 +82,47 @@ public final class Enricher {
    }
 
    private void apply(ObjectNode target, ObjectNode context, String type, boolean parameter) {
-      JsonNode guidance = target.path("compass");
-      JsonNode typeSymbol = findType(context, type);
+      JsonNode guidance = inheritedGuidance(target, context, type, parameter);
       boolean imported = context.path("origin").asText().startsWith("catalog:");
-      boolean canInherit =
-            parameter || Set.of("FIELD", "PROPERTY").contains(context.path("kind").asText());
-      if (canInherit && (guidance.isNull() || guidance.isMissingNode()) && typeSymbol != null) {
-         guidance = typeSymbol.path("compass");
-         if (!guidance.isMissingNode() && !guidance.isNull()) {
-            target.set("compass", guidance.deepCopy());
-            target.put("guidanceOrigin", typeSymbol.path("id").asText());
-         }
-      }
-      if (canInherit
-            && guidance.isObject()
-            && typeSymbol != null
-            && typeSymbol.path("compass").isObject()) {
-         ObjectNode merged = guidance.deepCopy();
-         JsonNode defaults = typeSymbol.path("compass");
-         for (String field : List.of("options", "extra", "tags")) {
-            if (merged.path(field).isMissingNode() || merged.path(field).isEmpty()) {
-               if (defaults.hasNonNull(field)) {
-                  merged.set(field, defaults.get(field).deepCopy());
-               }
-            }
-         }
-         target.set("compass", merged);
-         guidance = merged;
-      }
       if (guidance.isNull() || guidance.isMissingNode()) {
          return;
       }
       LinkedHashSet<String> values = new LinkedHashSet<>();
       boolean snapshotTruncated =
             imported
-                  && target.path("resolvedOptions").path("truncated").asBoolean()
+                  && target.path(RESOLVED_OPTIONS).path(TRUNCATED).asBoolean()
                   && java.util.stream.StreamSupport.stream(
-                              guidance.path("options").spliterator(), false)
-                        .anyMatch(rule -> !rule.path("source").asText("").isBlank());
+                              guidance.path(OPTIONS).spliterator(), false)
+                        .anyMatch(rule -> !rule.path(SOURCE).asText("").isBlank());
       int snapshotTotal =
-            snapshotTruncated ? target.path("resolvedOptions").path("total").asInt() : 0;
+            snapshotTruncated ? target.path(RESOLVED_OPTIONS).path("total").asInt() : 0;
       boolean failed = false;
       boolean deferred = false;
-      for (JsonNode rule : guidance.path("options")) {
-         for (JsonNode value : rule.path("values")) {
+      for (JsonNode rule : guidance.path(OPTIONS)) {
+         for (JsonNode value : rule.path(VALUES)) {
             values.add(value.asText());
          }
-         String resource = rule.path("source").asText("");
+         String resource = rule.path(SOURCE).asText("");
          String enumType = rule.path("enumType").asText("");
-         if (!resource.isBlank() && imported) {
-            target.path("resolvedOptions").path("values").forEach(v -> values.add(v.asText()));
-         } else if (!resource.isBlank()) {
-            try {
-               JsonNode document = resources.load(resource);
-               String pointer = rule.path("pointer").asText("");
-               JsonNode selected = pointer.isEmpty() ? document : document.at(pointer);
-               if (!selected.isArray()) {
-                  throw new IOException("Options pointer must select an array");
-               }
-               for (JsonNode value : selected) {
-                  if (!value.isTextual()) {
-                     throw new IOException("Options must be strings");
-                  }
-                  values.add(value.asText());
-               }
-            } catch (Exception e) {
-               failed = true;
-               diagnostics.add(
-                     Diagnostic.error(
-                           "OPTIONS_RESOURCE",
-                           "Unable to resolve options from resource '" + resource + "'",
-                           context.path("source").path("path").asText()));
-            }
-         }
-         if (!enumType.isBlank()) {
-            JsonNode enumeration = findType(context, enumType);
-            if (enumeration == null || !enumeration.path("kind").asText().equals("ENUM")) {
-               failed = true;
-               diagnostics.add(
-                     Diagnostic.error(
-                           "OPTIONS_ENUM",
-                           "Enum is not available in this module: " + enumType,
-                           context.path("source").path("path").asText()));
-            } else {
-               enumeration
-                     .path("enumValues")
-                     .forEach(v -> values.add(render(rule, enumeration, v.asText())));
-            }
-         }
-         String contract = rule.path("implementationsOf").asText("");
-         if (!contract.isBlank()) {
-            int before = values.size();
-            allTypes.stream()
-                  .filter(
-                        t ->
-                              t.path("language")
-                                    .asText()
-                                    .equals(context.path("language").asText()))
-                  .filter(t -> t.path("kind").asText().equals("ENUM"))
-                  .filter(t -> implementsContract(t, contract, new HashSet<>()))
-                  .sorted(Comparator.comparing(t -> t.path("id").asText()))
-                  .forEach(
-                        t ->
-                              t.path("enumValues")
-                                    .forEach(
-                                          v ->
-                                                values.add(
-                                                      render(
-                                                            rule,
-                                                            t,
-                                                            v.asText()))));
-            if (before == values.size()) {
-               deferred = true;
-            }
-         }
+         failed |= !addResourceOptions(target, context, rule, resource, imported, values);
+         failed |= !addEnumOptions(context, rule, enumType, values);
+         deferred |= addImplementationOptions(context, rule, values);
       }
-      var state = target.putObject("resolvedOptions");
-      state.put(
-            "status",
-            failed
-                  ? "failed"
-                  : snapshotTruncated || values.size() > maxOptions
-                        ? "truncated"
-                        : deferred && values.isEmpty() ? "deferred" : "complete");
+      var state = target.putObject(RESOLVED_OPTIONS);
+      boolean truncated = snapshotTruncated || values.size() > maxOptions;
+      state.put("status", optionStatus(failed, truncated, deferred && values.isEmpty()));
       state.put("total", Math.max(snapshotTotal, values.size()));
-      state.put("truncated", snapshotTruncated || values.size() > maxOptions);
-      ArrayNode available = state.putArray("values");
+      state.put(TRUNCATED, snapshotTruncated || values.size() > maxOptions);
+      ArrayNode available = state.putArray(VALUES);
       values.stream().limit(maxOptions).forEach(available::add);
       if (imported) {
          // Producer examples are already embedded and keep their producer origin.
          return;
       }
+      addExamples(target, context, guidance);
+   }
+
+   private void addExamples(ObjectNode target, ObjectNode context, JsonNode guidance) {
       ArrayNode examples = target.putArray("usageExamples");
       for (JsonNode reference : guidance.path("examples")) {
          String resource = reference.asText();
@@ -206,32 +132,145 @@ public final class Enricher {
             if (!items.isArray()) {
                throw new IOException("Expected example items");
             }
-            int count = 0;
-            for (JsonNode entry : items) {
-               String id = entry.path("id").asText("");
-               if (id.isEmpty()
-                     || id.equals(context.path("id").asText())
-                     || id.equals(context.path("qualifiedName").asText())
-                     || id.equals(context.path("signature").asText())) {
-                  if (++count > 50) {
-                     throw new IOException("Too many matching example entries");
-                  }
-                  examples.add(entry.deepCopy());
-               }
-            }
+            addMatchingExamples(examples, items, context);
          } catch (Exception e) {
             diagnostics.add(
                   Diagnostic.error(
                         "EXAMPLES_RESOURCE",
                         "Unable to resolve examples from resource '" + resource + "'",
-                        context.path("source").path("path").asText()));
+                        context.path(SOURCE).path("path").asText()));
+         }
+      }
+   }
+
+   private JsonNode inheritedGuidance(
+         ObjectNode target, ObjectNode context, String type, boolean parameter) {
+      JsonNode guidance = target.path(COMPASS);
+      JsonNode typeSymbol = findType(context, type);
+      boolean canInherit =
+            parameter || Set.of("FIELD", "PROPERTY").contains(context.path("kind").asText());
+      if (canInherit && (guidance.isNull() || guidance.isMissingNode()) && typeSymbol != null) {
+         guidance = typeSymbol.path(COMPASS);
+         if (!guidance.isMissingNode() && !guidance.isNull()) {
+            target.set(COMPASS, guidance.deepCopy());
+            target.put("guidanceOrigin", typeSymbol.path("id").asText());
+         }
+      }
+      if (canInherit
+            && guidance.isObject()
+            && typeSymbol != null
+            && typeSymbol.path(COMPASS).isObject()) {
+         ObjectNode merged = guidance.deepCopy();
+         JsonNode defaults = typeSymbol.path(COMPASS);
+         mergeDefaults(merged, defaults);
+         target.set(COMPASS, merged);
+         guidance = merged;
+      }
+      return guidance;
+   }
+
+   private static void mergeDefaults(ObjectNode merged, JsonNode defaults) {
+      for (String field : List.of(OPTIONS, "extra", "tags")) {
+         if ((merged.path(field).isMissingNode() || merged.path(field).isEmpty())
+               && defaults.hasNonNull(field)) {
+            merged.set(field, defaults.get(field).deepCopy());
+         }
+      }
+   }
+
+   private boolean addResourceOptions(ObjectNode target, ObjectNode context, JsonNode rule,
+         String resource, boolean imported, Set<String> values) {
+      if (resource.isBlank()) {
+         return true;
+      }
+      if (imported) {
+         target.path(RESOLVED_OPTIONS).path(VALUES).forEach(v -> values.add(v.asText()));
+         return true;
+      }
+      try {
+         JsonNode document = resources.load(resource);
+         String pointer = rule.path("pointer").asText("");
+         JsonNode selected = pointer.isEmpty() ? document : document.at(pointer);
+         if (!selected.isArray()) {
+            throw new IOException("Options pointer must select an array");
+         }
+         for (JsonNode value : selected) {
+            if (!value.isTextual()) {
+               throw new IOException("Options must be strings");
+            }
+            values.add(value.asText());
+         }
+         return true;
+      } catch (IOException | RuntimeException e) {
+         diagnostics.add(Diagnostic.error("OPTIONS_RESOURCE",
+               "Unable to resolve options from resource '" + resource + "'",
+               context.path(SOURCE).path("path").asText()));
+         return false;
+      }
+   }
+
+   private boolean addEnumOptions(JsonNode context, JsonNode rule, String enumType,
+         Set<String> values) {
+      if (enumType.isBlank()) {
+         return true;
+      }
+      JsonNode enumeration = findType(context, enumType);
+      if (enumeration == null || !enumeration.path("kind").asText().equals("ENUM")) {
+         diagnostics.add(Diagnostic.error("OPTIONS_ENUM",
+               "Enum is not available in this module: " + enumType,
+               context.path(SOURCE).path("path").asText()));
+         return false;
+      }
+      enumeration.path("enumValues").forEach(v -> values.add(render(rule, enumeration, v.asText())));
+      return true;
+   }
+
+   private boolean addImplementationOptions(JsonNode context, JsonNode rule, Set<String> values) {
+      String contract = rule.path("implementationsOf").asText("");
+      if (contract.isBlank()) {
+         return false;
+      }
+      int before = values.size();
+      allTypes.stream()
+            .filter(t -> t.path(LANGUAGE).asText().equals(context.path(LANGUAGE).asText()))
+            .filter(t -> t.path("kind").asText().equals("ENUM"))
+            .filter(t -> implementsContract(t, contract, new HashSet<>()))
+            .sorted(Comparator.comparing(t -> t.path("id").asText()))
+            .forEach(t -> t.path("enumValues")
+                  .forEach(v -> values.add(render(rule, t, v.asText()))));
+      return before == values.size();
+   }
+
+   private static String optionStatus(boolean failed, boolean truncated, boolean deferred) {
+      if (failed) {
+         return "failed";
+      }
+      if (truncated) {
+         return TRUNCATED;
+      }
+      return deferred ? "deferred" : "complete";
+   }
+
+   private static void addMatchingExamples(ArrayNode examples, JsonNode items, JsonNode context)
+         throws IOException {
+      int count = 0;
+      for (JsonNode entry : items) {
+         String id = entry.path("id").asText("");
+         if (id.isEmpty()
+               || id.equals(context.path("id").asText())
+               || id.equals(context.path(QUALIFIED_NAME).asText())
+               || id.equals(context.path("signature").asText())) {
+            if (++count > 50) {
+               throw new IOException("Too many matching example entries");
+            }
+            examples.add(entry.deepCopy());
          }
       }
    }
 
    private String render(JsonNode rule, JsonNode enumeration, String value) {
       return rule.path("render").asText("NAME").equals("QUALIFIED")
-            ? enumeration.path("qualifiedName").asText() + "." + value
+            ? enumeration.path(QUALIFIED_NAME).asText() + "." + value
             : value;
    }
 
@@ -246,10 +285,10 @@ public final class Enricher {
             allTypes.stream()
                   .filter(
                         t ->
-                              t.path("language")
+                              t.path(LANGUAGE)
                                           .asText()
-                                          .equals(context.path("language").asText())
-                                    && t.path("qualifiedName")
+                                          .equals(context.path(LANGUAGE).asText())
+                                    && t.path(QUALIFIED_NAME)
                                           .asText()
                                           .equals(qualified))
                   .toList();

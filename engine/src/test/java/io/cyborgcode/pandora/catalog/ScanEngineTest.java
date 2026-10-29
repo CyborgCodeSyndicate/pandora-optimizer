@@ -49,7 +49,7 @@ class ScanEngineTest {
                 return "fake";
             }
 
-            public ScanResult scan(ScanRequest request) throws Exception {
+            public ScanResult scan(ScanRequest request) throws java.io.IOException {
                 calls.incrementAndGet();
                 Compass parameterGuidance =
                         new Compass(

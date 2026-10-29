@@ -8,6 +8,10 @@ A local Java CLI that turns author-curated code annotations into context for **A
 - Resources can live in the repository or at an HTTPS endpoint. The transport SPI allows additional providers.
 - Published JSON catalogs carry extracted guidance, resolved options and embedded usage examples into another repository.
 
+Usage JSONs can stay beside the library annotations. See
+[library-owned usage examples](docs/library-usage-examples.md) for the ROA
+configuration and how the consumer reads embedded examples without the original files.
+
 ## Build and run
 
 Development requirements: JDK 21+, .NET SDK 8.0.400 or later in the 8.0 feature band, and Python 3.12+ only for packaging/integration checks. Maven is pinned by the wrapper. Java annotation consumers can use Java 17+. The C# annotation package targets .NET 8.

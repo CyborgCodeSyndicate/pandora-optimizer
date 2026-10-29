@@ -2,6 +2,7 @@ package io.cyborgcode.pandora.spi;
 
 import io.cyborgcode.pandora.model.ScanRequest;
 import io.cyborgcode.pandora.model.ScanResult;
+import java.io.IOException;
 
 /**
  * Implement in Java or bridge an external process that implements protocol v1.
@@ -14,5 +15,5 @@ public interface LanguageAdapter {
    String language();
 
    /** Extracts symbol facts without executing application code. */
-   ScanResult scan(ScanRequest request) throws Exception;
+   ScanResult scan(ScanRequest request) throws IOException, InterruptedException;
 }

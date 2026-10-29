@@ -42,11 +42,17 @@ class MainTest {
             """);
     }
     @Test void helpAndVersionExitSuccessfully() {
-        assertEquals(0, run().status());
+        var rootHelp = run();
+        assertEquals(0, rootHelp.status());
+        assertTrue(rootHelp.output().contains("Usage: pandora"));
         assertTrue(run("--help").output().contains("navigator"));
         assertTrue(run("--version").output().contains("Pandora Optimizer"));
-        assertEquals(0, run("teacher").status());
-        assertEquals(0, run("navigator").status());
+        for (String domain : List.of("teacher", "navigator")) {
+            var help = run(domain);
+            assertEquals(0, help.status());
+            assertTrue(help.output().contains("Use search or show"));
+            assertEquals("", help.error());
+        }
     }
     @Test void workspaceNamesHandleFilesystemRootsAndUnsupportedCharacters() {
         assertEquals("workspace", Main.workspaceId(root.toAbsolutePath().getRoot()));

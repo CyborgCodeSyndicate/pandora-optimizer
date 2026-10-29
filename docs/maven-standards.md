@@ -81,6 +81,13 @@ SpotBugs reports retain the shared conventions.
   checks, using the shared utilities Maven setup action and inheritance check.
 - `pr-validator.yml` invokes the shared PR pipeline for Maven verification,
   reporting, OWASP and SonarCloud.
+  SonarScanner uses the JDK 21 installed by the shared setup action through
+  `SONAR_SCANNER_SKIP_JRE_PROVISIONING=true`. This avoids an additional JRE
+  metadata download; analysis, authentication and the quality gate remain active.
+  A preflight checks for a missing `SONAR_TOKEN` and validates personal tokens
+  with bearer authentication before the Maven/security build. Organization-scoped
+  analysis tokens are validated by the scanner rather than a user-token API.
+  See [Sonar's scanner configuration](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/analysis-parameters/parameters-not-settable-in-ui).
 - `deploy.yml` delegates versioning, tagging and GitHub Packages deployment to
   the shared deployment pipeline.
 - `deploy-maven-central.yml` delegates tagged-release publication to the shared

@@ -5,7 +5,8 @@ package io.cyborgcode.pandora.model;
  *
  * @author Cyborg Code Syndicate 💍👨💻
  */
-public record Diagnostic(String code, String severity, String message, String path) {
+public record Diagnostic(String code, String severity, String message, String path)
+      implements java.io.Serializable {
 
    /** Creates an error diagnostic associated with a path. */
    public static Diagnostic error(String code, String message, String path) {

@@ -30,7 +30,7 @@ jobs:
       - run: mvn -B -ntp verify
       - name: Check inherited Maven standards
         run: |
-          mvn -B -ntp help:effective-pom -Doutput=target/effective-pom.xml
+          mvn -B -ntp help:effective-pom '-Doutput=target/effective-pom.xml'
           java scripts/CheckMavenInheritance.java target/effective-pom.xml
       - run: dotnet restore PandoraOptimizer.sln --locked-mode
       - run: dotnet test PandoraOptimizer.sln --no-restore --collect:"XPlat Code Coverage"
